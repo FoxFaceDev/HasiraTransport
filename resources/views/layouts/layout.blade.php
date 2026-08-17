@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ config('app.name', 'Hasira Transport') }}</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="app-shell font-sans antialiased min-h-screen flex text-sm overflow-x-hidden">
+    <x-operation-notification />
+
+    <aside class="app-sidebar w-64 flex-shrink-0 m-4 flex flex-col h-[calc(100vh-2rem)]">
+        <div class="p-5 flex items-center gap-3 border-b border-slate-100">
+            <div class="brand-mark w-11 h-11 flex items-center justify-center text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 7h11v9H3V7Zm11 3h3.5l3 3v3H14v-6ZM6.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+                </svg>
+            </div>
+            <div>
+                <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">Hasira</div>
+                <div class="text-lg font-bold text-slate-900 leading-tight">Transport</div>
+            </div>
+        </div>
+
+        <nav class="flex-1 mt-4 px-3 space-y-1.5 overflow-y-auto">
+            @can('view drivers')
+            <a href="{{ route('drivers.index') }}" class="nav-link {{ request()->routeIs('drivers.*') ? 'is-active' : '' }}">
+                <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m10-10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm10 10v-2a4 4 0 0 0-3-3.87m-2-7.96a4 4 0 0 1 0 7.75"/></svg>
+                <span>شۆفێرەکان</span>
+            </a>
+            @endcan
+
+            @can('view tankers')
+            <a href="{{ route('tankers.index') }}" class="nav-link {{ request()->routeIs('tankers.*') ? 'is-active' : '' }}">
+                <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 7h11v9H3V7Zm11 3h3.5l3 3v3H14v-6ZM6.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>
+                <span>بارهەڵگرەکان</span>
+            </a>
+            @endcan
+
+            @can('view gatekeeper')
+            <a href="{{ route('gatekeeper.index') }}" class="nav-link {{ request()->routeIs('gatekeeper.index') ? 'is-active' : '' }}">
+                <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 19V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10M8 7V4m8 3V4M3 19h18M8 12h2m4 0h2m-8 4h2m4 0h2"/></svg>
+                <span>کۆنترۆڵی دەروازە</span>
+            </a>
+            @endcan
+
+            @can('view reports')
+            <a href="{{ route('reports.index') }}" class="nav-link {{ request()->routeIs('reports.*') ? 'is-active' : '' }}">
+                <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8m-6-6v6h6M8 13h8m-8 4h8"/></svg>
+                <span>ڕاپۆرتەکان</span>
+            </a>
+            @endcan
+
+            @can('manage users')
+            <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*') ? 'is-active' : '' }}">
+                <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4m10-10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm7-1v6m3-3h-6"/></svg>
+                <span>بەکارهێنەران</span>
+            </a>
+            @endcan
+
+            @role('super_admin')
+            <a href="{{ route('roles.index') }}" class="nav-link {{ request()->routeIs('roles.*') ? 'is-active' : '' }}">
+                <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7.4-3a7.4 7.4 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a8 8 0 0 0-1.8-1L14.8 3h-4l-.4 3.1a8 8 0 0 0-1.8 1l-2.4-1-2 3.4 2 1.5a7.4 7.4 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a8 8 0 0 0 1.8 1l.4 3.1h4l.4-3.1a8 8 0 0 0 1.8-1l2.4 1 2-3.4-2-1.5a7.4 7.4 0 0 0 .1-1Z"/></svg>
+                <span>ڕۆڵ و دەسەڵاتەکان</span>
+            </a>
+            @endrole
+
+            @can('view gatekeeper')
+            <div class="pt-4 pb-1 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">لیستی دۆخەکان</div>
+            <a href="{{ route('gatekeeper.filter', 'green') }}" class="nav-link is-green {{ request()->is('*green') ? 'is-active' : '' }}">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 ml-4 ring-4 ring-emerald-50"></span>
+                <span>هاتووەکان</span>
+            </a>
+            <a href="{{ route('gatekeeper.filter', 'yellow') }}" class="nav-link is-yellow {{ request()->is('*yellow') ? 'is-active' : '' }}">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 ml-4 ring-4 ring-amber-50"></span>
+                <span>دواخراوەکان</span>
+            </a>
+            <a href="{{ route('gatekeeper.filter', 'red') }}" class="nav-link is-red {{ request()->is('*red') ? 'is-active' : '' }}">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 ml-4 ring-4 ring-rose-50"></span>
+                <span>نەهاتووەکان</span>
+            </a>
+            @endcan
+        </nav>
+
+        <div class="p-3 border-t border-slate-100">
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="nav-link w-full text-rose-600 hover:text-rose-700 hover:bg-rose-50">
+                    <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10 17l5-5-5-5m5 5H3m11-9h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg>
+                    دەرچوون
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <main class="app-main min-w-0 flex-1 flex flex-col h-screen overflow-y-auto p-4 relative">
+        <header class="app-topbar flex justify-between items-center mb-5 px-5 py-3.5">
+            <div class="flex items-center gap-3">
+                <div class="user-avatar w-10 h-10 rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm4 14a7 7 0 0 0-14 0"/></svg>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-900">{{ auth()->user()->name ?? 'User' }}</h3>
+                    <p class="text-xs text-slate-500">{{ auth()->user()?->roles->pluck('name')->map(fn ($role) => str_replace('_', ' ', $role))->join('، ') }}</p>
+                </div>
+            </div>
+
+            <div x-data="{ online: navigator.onLine }" @online.window="online = true" @offline.window="online = false" class="flex items-center">
+                <div x-show="online" class="status-online flex items-center px-3 py-1.5 rounded-full font-semibold text-xs">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 ml-2"></span> ئۆنلاین
+                </div>
+                <div x-show="!online" style="display:none;" class="status-offline flex items-center px-3 py-1.5 rounded-full font-semibold text-xs">
+                    <span class="w-2 h-2 rounded-full bg-rose-500 ml-2 animate-pulse"></span> ئۆفلاین
+                </div>
+            </div>
+        </header>
+
+        <div class="min-w-0 flex-1 pb-4">
+            @yield('content')
+        </div>
+    </main>
+
+    @stack('scripts')
+</body>
+</html>

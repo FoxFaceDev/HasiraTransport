@@ -1,0 +1,462 @@
+@import 'tailwindcss';
+
+@font-face {
+    font-family: 'Noto Kufi Arabic';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('/fonts/NotoKufiArabic-VariableFont_wght.ttf') format('truetype');
+}
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Noto Kufi Arabic', Tahoma, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+@layer base {
+    html,
+    body,
+    button,
+    input,
+    select,
+    textarea {
+        font-family: var(--font-sans);
+    }
+
+    body {
+        background: #e8eef6;
+        color: #172033;
+    }
+
+    ::selection {
+        background: #bfdbfe;
+        color: #172033;
+    }
+}
+
+@layer components {
+    .app-shell {
+        background:
+            radial-gradient(circle at 88% 4%, rgba(191, 219, 254, 0.9), transparent 30rem),
+            linear-gradient(135deg, #edf2f8 0%, #e2eaf4 100%);
+        color: #172033;
+    }
+
+    .app-sidebar {
+        background: rgba(248, 250, 252, 0.97);
+        border: 1px solid #cbd6e4;
+        border-radius: 1.5rem;
+        box-shadow: 0 18px 50px rgba(30, 55, 90, 0.13);
+    }
+
+    .brand-mark {
+        background: linear-gradient(145deg, #2563eb, #38bdf8);
+        border-radius: 0.9rem;
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.22);
+    }
+
+    .nav-link {
+        align-items: center;
+        border: 1px solid transparent;
+        border-radius: 0.9rem;
+        color: #64748b;
+        display: flex;
+        padding: 0.72rem 0.9rem;
+        transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+    }
+
+    .nav-link:hover {
+        background: #e7eef7;
+        color: #1e40af;
+        transform: translateX(-2px);
+    }
+
+    .nav-link.is-active {
+        background: #dce9fb;
+        border-color: #bdd4f4;
+        color: #1d4ed8;
+        font-weight: 700;
+    }
+
+    .nav-link.is-green {
+        color: #047857;
+    }
+
+    .nav-link.is-yellow {
+        color: #a16207;
+    }
+
+    .nav-link.is-red {
+        color: #be123c;
+    }
+
+    .app-topbar {
+        background: rgba(248, 250, 252, 0.94);
+        border: 1px solid #cbd6e4;
+        border-radius: 1.15rem;
+        box-shadow: 0 10px 30px rgba(30, 55, 90, 0.11);
+    }
+
+    .user-avatar {
+        background: #edf4ff;
+        border: 1px solid #d8e8ff;
+        color: #2563eb;
+    }
+
+    .glass-panel {
+        background: #f9fbfd;
+        border: 1px solid #c9d5e3;
+        border-radius: 1.25rem;
+        box-shadow: 0 16px 42px rgba(30, 55, 90, 0.12);
+    }
+
+    .glass-card {
+        background: #f9fbfd;
+        border: 1px solid #c9d5e3;
+        border-radius: 1.15rem;
+        box-shadow: 0 24px 65px rgba(30, 55, 90, 0.16);
+        color: #172033;
+    }
+
+    .glass-input {
+        background: #eef3f8;
+        border: 1px solid #c4d0df;
+        color: #172033;
+        outline: none;
+        transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .glass-input::placeholder {
+        color: #94a3b8;
+    }
+
+    .glass-input:focus {
+        background: #ffffff;
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.14);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        box-shadow: 0 7px 18px rgba(37, 99, 235, 0.2);
+        color: #ffffff;
+        transition: box-shadow 160ms ease, transform 160ms ease;
+    }
+
+    .btn-primary:hover {
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.28);
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background: #e2e9f1;
+        border: 1px solid #c8d3df;
+        color: #334155;
+        transition: background-color 160ms ease, color 160ms ease;
+    }
+
+    .btn-secondary:hover {
+        background: #d5e0eb;
+        color: #172033;
+    }
+
+    .glass-panel table thead tr {
+        background: #e7edf5;
+        border-color: #c5d0dd !important;
+        color: #000000 !important;
+    }
+
+    .glass-panel table tbody tr {
+        border-color: #ccd6e2 !important;
+    }
+
+    .glass-panel table th,
+    .glass-panel table td {
+        color: #000000 !important;
+    }
+
+    .glass-panel table td > :not(button) {
+        color: #000000 !important;
+    }
+
+    .glass-panel table tbody tr > td {
+        transition: background-color 160ms ease, border-color 160ms ease;
+    }
+
+    .glass-panel table tbody tr:hover > td {
+        background-color: #e8eef6;
+    }
+
+    /* Cell backgrounds render consistently across tables, unlike gradients on rows. */
+    .glass-panel table tbody tr.queue-row-green > td {
+        background-color: #d9f5e7 !important;
+        border-top: 1px solid #86e4b7;
+        border-bottom: 1px solid #86e4b7;
+    }
+
+    .glass-panel table tbody tr.queue-row-green > td:first-child {
+        border-right: 5px solid #10b981;
+    }
+
+    .glass-panel table tbody tr.queue-row-green:hover > td {
+        background-color: #c8efd9 !important;
+    }
+
+    .glass-panel table tbody tr.queue-row-yellow > td {
+        background-color: #ffefb8 !important;
+        border-top: 1px solid #f5d365;
+        border-bottom: 1px solid #f5d365;
+    }
+
+    .glass-panel table tbody tr.queue-row-yellow > td:first-child {
+        border-right: 5px solid #f59e0b;
+    }
+
+    .glass-panel table tbody tr.queue-row-yellow:hover > td {
+        background-color: #ffe69a !important;
+    }
+
+    .glass-panel table tbody tr.queue-row-red > td {
+        background-color: #ffdee4 !important;
+        border-top: 1px solid #f8aeb9;
+        border-bottom: 1px solid #f8aeb9;
+    }
+
+    .glass-panel table tbody tr.queue-row-red > td:first-child {
+        border-right: 5px solid #f43f5e;
+    }
+
+    .glass-panel table tbody tr.queue-row-red:hover > td {
+        background-color: #ffcdd5 !important;
+    }
+
+    .glass-panel .text-gray-400,
+    .glass-card .text-gray-400 {
+        color: #64748b !important;
+    }
+
+    .glass-panel .text-gray-300,
+    .glass-card .text-gray-300 {
+        color: #475569 !important;
+    }
+
+    .glass-panel .text-green-400,
+    .glass-card .text-green-400 {
+        color: #047857;
+    }
+
+    .glass-panel .text-yellow-400,
+    .glass-panel .text-yellow-300,
+    .glass-card .text-yellow-400 {
+        color: #a16207;
+    }
+
+    .glass-panel .text-red-400,
+    .glass-card .text-red-400 {
+        color: #be123c;
+    }
+
+    .glass-panel .text-blue-400,
+    .glass-card .text-blue-400 {
+        color: #2563eb;
+    }
+
+    /* Table content stays black; button utilities retain their own status colours. */
+    .glass-panel table thead th,
+    .glass-panel table tbody td,
+    .glass-panel table tbody td > :not(button) {
+        color: #000000 !important;
+    }
+
+    .modal-overlay {
+        background: rgba(15, 23, 42, 0.32);
+        backdrop-filter: blur(5px);
+    }
+
+    .operation-notification-overlay {
+        background: rgba(15, 23, 42, 0.48);
+        backdrop-filter: blur(10px);
+    }
+
+    .operation-notification-card {
+        background: rgba(255, 255, 255, 0.98);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 32px 90px rgba(15, 23, 42, 0.28);
+    }
+
+    .operation-notification-glow {
+        border-radius: 9999px;
+        filter: blur(18px);
+        height: 9rem;
+        left: 50%;
+        opacity: 0.22;
+        position: absolute;
+        top: -6rem;
+        transform: translateX(-50%);
+        width: 19rem;
+    }
+
+    .operation-notification-card.is-success .operation-notification-glow {
+        background: #10b981;
+    }
+
+    .operation-notification-card.is-error .operation-notification-glow {
+        background: #f43f5e;
+    }
+
+    .operation-notification-close {
+        background: #f1f5f9;
+        color: #64748b;
+        transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+    }
+
+    .operation-notification-close:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+        transform: rotate(8deg);
+    }
+
+    .operation-notification-icon {
+        animation: operation-icon-pop 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        position: relative;
+    }
+
+    .operation-notification-icon::before,
+    .operation-notification-icon::after {
+        border: 1px solid currentColor;
+        border-radius: 9999px;
+        content: '';
+        inset: -0.55rem;
+        opacity: 0;
+        position: absolute;
+        animation: operation-ring 1.4s ease-out 300ms both;
+    }
+
+    .operation-notification-icon::after {
+        animation-delay: 480ms;
+        inset: -1rem;
+    }
+
+    .is-success .operation-notification-icon {
+        background: linear-gradient(145deg, #d1fae5, #ecfdf5);
+        box-shadow: 0 14px 36px rgba(16, 185, 129, 0.22);
+        color: #059669;
+    }
+
+    .is-error .operation-notification-icon {
+        animation: operation-icon-pop 600ms cubic-bezier(0.16, 1, 0.3, 1) both, operation-shake 420ms ease 650ms both;
+        background: linear-gradient(145deg, #ffe4e6, #fff1f2);
+        box-shadow: 0 14px 36px rgba(244, 63, 94, 0.2);
+        color: #e11d48;
+    }
+
+    .operation-notification-check,
+    .operation-notification-mark {
+        stroke-dasharray: 30;
+        stroke-dashoffset: 30;
+        animation: operation-draw 550ms ease 380ms forwards;
+    }
+
+    .operation-notification-dot {
+        opacity: 0;
+        animation: operation-fade-in 220ms ease 800ms forwards;
+    }
+
+    .operation-notification-progress {
+        animation: operation-progress 5s linear forwards;
+        transform-origin: right center;
+    }
+
+    @keyframes operation-icon-pop {
+        0% { opacity: 0; transform: scale(0.45) rotate(-10deg); }
+        65% { opacity: 1; transform: scale(1.1) rotate(3deg); }
+        100% { opacity: 1; transform: scale(1) rotate(0); }
+    }
+
+    @keyframes operation-ring {
+        0% { opacity: 0.45; transform: scale(0.75); }
+        100% { opacity: 0; transform: scale(1.18); }
+    }
+
+    @keyframes operation-draw {
+        to { stroke-dashoffset: 0; }
+    }
+
+    @keyframes operation-fade-in {
+        to { opacity: 1; }
+    }
+
+    @keyframes operation-shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(5px); }
+        50% { transform: translateX(-5px); }
+        75% { transform: translateX(3px); }
+    }
+
+    @keyframes operation-progress {
+        from { transform: scaleX(1); }
+        to { transform: scaleX(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .operation-notification-icon,
+        .operation-notification-icon::before,
+        .operation-notification-icon::after,
+        .operation-notification-check,
+        .operation-notification-mark,
+        .operation-notification-dot,
+        .operation-notification-progress {
+            animation: none !important;
+            opacity: 1;
+            stroke-dashoffset: 0;
+        }
+    }
+
+    .form-label {
+        color: #475569;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .status-online {
+        background: #ecfdf5;
+        border: 1px solid #bbf7d0;
+        color: #047857;
+    }
+
+    .status-offline {
+        background: #fff1f2;
+        border: 1px solid #fecdd3;
+        color: #be123c;
+    }
+
+    @media (max-width: 900px) {
+        .app-shell {
+            display: block;
+            overflow: auto;
+        }
+
+        .app-sidebar {
+            height: auto !important;
+            margin: 0.75rem !important;
+            width: calc(100% - 1.5rem) !important;
+        }
+
+        .app-sidebar nav {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            margin-top: 0;
+            padding-bottom: 1rem;
+        }
+
+        .app-main {
+            height: auto !important;
+            min-height: 100vh;
+        }
+    }
+}
