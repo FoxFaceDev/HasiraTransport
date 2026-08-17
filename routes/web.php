@@ -46,6 +46,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/gatekeeper/filter/{status}', [QueueController::class, 'filter'])->middleware('can:view gatekeeper')->name('gatekeeper.filter');
     Route::post('/gatekeeper/queue/{tanker}', [QueueController::class, 'updateStatus'])->middleware('can:update queue status')->name('gatekeeper.update-status');
     Route::post('/gatekeeper/queue/{tanker}/note', [QueueController::class, 'updateNote'])->middleware('can:update queue notes')->name('gatekeeper.update-note');
+    Route::get('/gatekeeper/sync', [QueueController::class, 'syncSnapshot'])->middleware('can:view gatekeeper')->name('gatekeeper.sync.snapshot');
+    Route::post('/gatekeeper/sync', [QueueController::class, 'syncPush'])->middleware('can:view gatekeeper')->name('gatekeeper.sync.push');
     Route::post('/gatekeeper/reset', [QueueController::class, 'resetQueue'])->middleware('can:reset queue')->name('gatekeeper.reset');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

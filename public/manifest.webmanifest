@@ -1,0 +1,21 @@
+{
+    "name": "Hasira Transport Gatekeeper",
+    "short_name": "Hasira",
+    "id": "/gatekeeper",
+    "description": "Offline-capable gatekeeper operations for Hasira Transport",
+    "start_url": "/gatekeeper",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#e8eef6",
+    "theme_color": "#2563eb",
+    "lang": "ku",
+    "dir": "rtl",
+    "icons": [
+        {
+            "src": "/icons/hasira-mark.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}

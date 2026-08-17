@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Queue;
 use App\Models\Tanker;
+use App\Models\GatekeeperSyncOperation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Mccarlosen\LaravelMpdf\Facades\LaravelMpdf as Pdf;
 use RuntimeException;
 use Throwable;
@@ -15,11 +17,9 @@ class QueueController extends Controller
 {
     public function index()
     {
-        $tankers = Tanker::with(['driver', 'latestQueue'])
-            ->orderBy('sequence_number')
-            ->get();
+        $snapshot = $this->snapshot();
 
-        return view('gatekeeper.index', compact('tankers'));
+        return view('gatekeeper.index', compact('snapshot'));
     }
 
     public function filter($status)
@@ -29,12 +29,9 @@ class QueueController extends Controller
             abort(404);
         }
 
-        $queues = Queue::with(['tanker.driver'])
-            ->where('status', $status)
-            ->latest()
-            ->get();
+        $snapshot = $this->snapshot();
 
-        return view('gatekeeper.filter', compact('queues', 'status'));
+        return view('gatekeeper.filter', compact('snapshot', 'status'));
     }
 
     public function updateStatus(Request $request, Tanker $tanker)
@@ -83,6 +80,76 @@ class QueueController extends Controller
         );
 
         return response()->json(['success' => true]);
+    }
+
+    public function syncSnapshot()
+    {
+        return response()->json($this->snapshot());
+    }
+
+    public function syncPush(Request $request)
+    {
+        $validated = $request->validate([
+            'operations' => 'present|array|max:250',
+            'operations.*.operation_uuid' => 'required|uuid',
+            'operations.*.type' => 'required|in:status,note',
+            'operations.*.tanker_id' => 'required|integer|exists:tankers,id',
+            'operations.*.payload' => 'required|array',
+            'operations.*.payload.status' => 'nullable|in:green,red,yellow,pending',
+            'operations.*.payload.scheduled_date' => 'nullable|date',
+            'operations.*.payload.scheduled_time' => 'nullable|string|max:255',
+            'operations.*.payload.note' => 'nullable|string',
+            'operations.*.client_created_at' => 'nullable|date',
+        ]);
+
+        $accepted = DB::transaction(function () use ($validated, $request) {
+            $accepted = [];
+
+            foreach ($validated['operations'] as $operation) {
+                if ($operation['type'] === 'status' && ! isset($operation['payload']['status'])) {
+                    throw ValidationException::withMessages([
+                        'operations' => 'A status operation must include a status value.',
+                    ]);
+                }
+
+                $alreadyProcessed = GatekeeperSyncOperation::query()
+                    ->where('operation_uuid', $operation['operation_uuid'])
+                    ->exists();
+
+                if ($alreadyProcessed) {
+                    $accepted[] = $operation['operation_uuid'];
+                    continue;
+                }
+
+                $tanker = Tanker::with('driver')->findOrFail($operation['tanker_id']);
+
+                if ($operation['type'] === 'status') {
+                    abort_unless($request->user()->can('update queue status'), 403);
+                    $this->applyStatusOperation($tanker, $operation['payload'], $request->user()->id);
+                } else {
+                    abort_unless($request->user()->can('update queue notes'), 403);
+                    $this->applyNoteOperation($tanker, $operation['payload'], $request->user()->id);
+                }
+
+                GatekeeperSyncOperation::create([
+                    'operation_uuid' => $operation['operation_uuid'],
+                    'user_id' => $request->user()->id,
+                    'tanker_id' => $tanker->id,
+                    'type' => $operation['type'],
+                    'client_created_at' => $operation['client_created_at'] ?? null,
+                ]);
+
+                $accepted[] = $operation['operation_uuid'];
+            }
+
+            return $accepted;
+        }, 3);
+
+        return response()->json([
+            'accepted' => $accepted,
+            'snapshot' => $this->snapshot(),
+            'synced_at' => now()->toIso8601String(),
+        ]);
     }
 
     public function resetQueue()
@@ -157,5 +224,75 @@ class QueueController extends Controller
             'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
             'Cache-Control' => 'private, no-store, max-age=0',
         ]);
+    }
+
+    private function applyStatusOperation(Tanker $tanker, array $payload, int $gatekeeperId): void
+    {
+        $data = [
+            'driver_id' => $tanker->driver?->id,
+            'status' => $payload['status'],
+            'gatekeeper_id' => $gatekeeperId,
+        ];
+
+        if (array_key_exists('scheduled_date', $payload)) {
+            $data['scheduled_date'] = $payload['scheduled_date'];
+        }
+
+        if (array_key_exists('scheduled_time', $payload)) {
+            $data['scheduled_time'] = $payload['scheduled_time'];
+        }
+
+        Queue::updateOrCreate(['tanker_id' => $tanker->id], $data);
+    }
+
+    private function applyNoteOperation(Tanker $tanker, array $payload, int $gatekeeperId): void
+    {
+        Queue::updateOrCreate(
+            ['tanker_id' => $tanker->id],
+            [
+                'driver_id' => $tanker->driver?->id,
+                'gatekeeper_id' => $gatekeeperId,
+                'note' => $payload['note'] ?? null,
+            ]
+        );
+    }
+
+    private function snapshot(): array
+    {
+        $tankers = Tanker::with(['driver', 'latestQueue'])
+            ->orderBy('sequence_number')
+            ->get();
+
+        return [
+            'tankers' => $tankers->map(fn (Tanker $tanker) => [
+                'id' => $tanker->id,
+                'sequence_number' => $tanker->sequence_number,
+                'sequence_owner' => $tanker->sequence_owner,
+                'plate_number' => $tanker->plate_number,
+                'vin' => $tanker->vin,
+                'truck_type' => $tanker->truck_type,
+                'truck_color' => $tanker->truck_color,
+                'driver' => $tanker->driver ? [
+                    'id' => $tanker->driver->id,
+                    'name' => $tanker->driver->name,
+                    'phone' => $tanker->driver->phone,
+                    'has_certificate' => (bool) $tanker->driver->has_certificate,
+                ] : null,
+                'queue' => $tanker->latestQueue ? [
+                    'status' => $tanker->latestQueue->status,
+                    'scheduled_date' => $tanker->latestQueue->scheduled_date,
+                    'scheduled_time' => $tanker->latestQueue->scheduled_time,
+                    'note' => $tanker->latestQueue->note,
+                    'updated_at' => $tanker->latestQueue->updated_at?->toIso8601String(),
+                ] : [
+                    'status' => 'pending',
+                    'scheduled_date' => null,
+                    'scheduled_time' => null,
+                    'note' => null,
+                    'updated_at' => null,
+                ],
+            ])->values(),
+            'synced_at' => now()->toIso8601String(),
+        ];
     }
 }
