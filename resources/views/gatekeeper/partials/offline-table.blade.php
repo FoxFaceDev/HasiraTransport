@@ -1,12 +1,12 @@
 <div class="overflow-x-auto">
     <table class="w-full text-right border-collapse">
         <thead><tr class="border-b border-white/10 text-gray-400">
-            <th class="py-3 px-4 font-normal">#</th><th class="py-3 px-4 font-normal">زنجیرە</th><th class="py-3 px-4 font-normal">ژمارەی تەنکەر</th><th class="py-3 px-4 font-normal">ناوی شۆفێر</th><th class="py-3 px-4 font-normal">شەهادە</th><th class="py-3 px-4 font-normal">بەروار</th><th class="py-3 px-4 font-normal">کات</th><th class="py-3 px-4 font-normal">تێبینی</th><th class="py-3 px-4 font-normal">کردارەکان</th>
+            <th class="py-3 px-4 font-normal">زنجیرە</th><th class="py-3 px-4 font-normal">ژمارەی تەنکەر</th><th class="py-3 px-4 font-normal">ناوی شۆفێر</th><th class="py-3 px-4 font-normal">شەهادە</th><th class="py-3 px-4 font-normal">بەروار</th><th class="py-3 px-4 font-normal">کات</th><th class="py-3 px-4 font-normal">تێبینی</th><th class="py-3 px-4 font-normal">کردارەکان</th>
         </tr></thead>
         <tbody>
-            <template x-for="(tanker, index) in visibleTankers" :key="tanker.id">
+            <template x-for="tanker in visibleTankers" :key="tanker.id">
                 <tr class="border-b border-white/5 transition-colors" :class="getRowClass(tanker)">
-                    <td class="py-3 px-4" x-text="index + 1"></td><td class="py-3 px-4" x-text="tanker.sequence_number || '-'"></td><td class="py-3 px-4 font-medium" x-text="tanker.plate_number || '-'"></td><td class="py-3 px-4" x-text="tanker.driver?.name || '-'"></td>
+                    <td class="py-3 px-4" x-text="tanker.sequence_number || '-'"></td><td class="py-3 px-4 font-medium" x-text="tanker.plate_number || '-'"></td><td class="py-3 px-4" x-text="tanker.driver?.name || '-'"></td>
                     <td class="py-3 px-4"><span x-show="tanker.driver?.has_certificate" class="rounded-full bg-emerald-100 px-3 py-1 text-xs text-emerald-700">هەیەتی</span><span x-show="!tanker.driver?.has_certificate" class="rounded-full bg-rose-100 px-3 py-1 text-xs text-rose-700">نییەتی</span></td>
                     <td class="py-3 px-4" x-text="tanker.queue?.scheduled_date || '-'"></td><td class="py-3 px-4" x-text="tanker.queue?.scheduled_time || '-'"></td>
                     <td class="py-3 px-4">
@@ -27,8 +27,8 @@
                     </td>
                 </tr>
             </template>
-            <tr x-show="!ready"><td colspan="9" class="py-10 text-center text-slate-500">داتای ئۆفلاین ئامادە دەکرێت...</td></tr>
-            <tr x-cloak x-show="ready && visibleTankers.length === 0"><td colspan="9" class="py-10 text-center text-slate-500">هیچ داتایەک نەدۆزرایەوە.</td></tr>
+            <tr x-show="!ready"><td colspan="8" class="py-10 text-center text-slate-500">داتای ئۆفلاین ئامادە دەکرێت...</td></tr>
+            <tr x-cloak x-show="ready && visibleTankers.length === 0"><td colspan="8" class="py-10 text-center text-slate-500">هیچ داتایەک نەدۆزرایەوە.</td></tr>
         </tbody>
     </table>
 </div>

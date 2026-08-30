@@ -36,7 +36,7 @@
             @can('view tankers')
             <a href="{{ route('tankers.index') }}" class="nav-link {{ request()->routeIs('tankers.*') ? 'is-active' : '' }}">
                 <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 7h11v9H3V7Zm11 3h3.5l3 3v3H14v-6ZM6.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>
-                <span>بارهەڵگرەکان</span>
+                <span>خەتەکان</span>
             </a>
             @endcan
 

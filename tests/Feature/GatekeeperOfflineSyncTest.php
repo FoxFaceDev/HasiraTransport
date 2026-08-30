@@ -50,7 +50,9 @@ it('embeds the initial truck snapshot in the gatekeeper page', function () {
         ->assertOk()
         ->assertSee('gatekeeperQueueManager', false)
         ->assertSee('TEST-100', false)
-        ->assertSee('Offline Driver', false);
+        ->assertSee('Offline Driver', false)
+        ->assertDontSee('<th class="py-3 px-4 font-normal">#</th>', false)
+        ->assertDontSee('x-text="index + 1"', false);
 });
 
 it('applies queued operations exactly once', function () {

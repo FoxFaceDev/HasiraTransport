@@ -1,16 +1,41 @@
 @extends('layouts.layout')
 
 @section('content')
-<div x-data="{ showAddModal: false, showEditModal: false, editTanker: null }" class="space-y-6">
+<div
+    x-data="{
+        showAddModal: false,
+        showEditModal: false,
+        editTanker: null,
+        tankerSearch: @js(request('search', '')),
+        hasSearchResults: true,
+        filterTankers() {
+            const query = this.tankerSearch.trim().toLocaleLowerCase();
+            let visibleRows = 0;
+
+            this.$refs.tankerRows.querySelectorAll('[data-tanker-search]').forEach((row) => {
+                const matches = query === '' || row.dataset.tankerSearch.toLocaleLowerCase().includes(query);
+                row.style.display = matches ? '' : 'none';
+
+                if (matches) {
+                    visibleRows++;
+                }
+            });
+
+            this.hasSearchResults = visibleRows > 0;
+        }
+    }"
+    x-init="$nextTick(() => filterTankers())"
+    class="space-y-6"
+>
     <div class="flex justify-between items-center">
         <div>
-            <h2 class="text-2xl font-bold">بەڕێوەبردنی بارهەڵگرەکان</h2>
-            <p class="text-gray-400 mt-1">کۆی گشتی بارهەڵگرەکان: {{ $tankers->count() }} / {{ $maxTankers }}</p>
+            <h2 class="text-2xl font-bold">خەتەکان</h2>
+            <p class="text-gray-400 mt-1">کۆی گشتی خەتەکان: {{ $tankers->count() }} / {{ $maxTankers }}</p>
         </div>
         
         <div class="flex items-center gap-4">
-            <form action="{{ route('tankers.index') }}" method="GET" class="flex gap-2">
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="گەڕان بەدوای بارهەڵگر..." dir="rtl" class="glass-input px-4 py-2 rounded-lg text-sm w-64 text-right">
+            <form action="{{ route('tankers.index') }}" method="GET" @submit.prevent="filterTankers()" class="flex gap-2">
+                <input type="search" name="search" x-model="tankerSearch" @input.debounce.100ms="filterTankers()" value="{{ request('search') }}" placeholder="گەڕان بەدوای خەت..." dir="rtl" autocomplete="off" class="glass-input px-4 py-2 rounded-lg text-sm w-64 text-right">
                 <button type="submit" class="btn-secondary px-4 py-2 rounded-lg text-sm font-semibold">گەڕان</button>
             </form>
             
@@ -48,12 +73,16 @@
             <form action="{{ route('tankers.store') }}" method="POST" class="space-y-4">
                 @csrf
                 <div>
-                    <label class="block text-sm text-gray-400 mb-1">زنجیرە</label>
+                    <label class="block text-sm text-gray-400 mb-1">ڕیزبەندی</label>
                     <input type="text" name="sequence_number" class="glass-input w-full px-4 py-2 rounded-lg" required>
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-400 mb-1">خاوەنی زنجیرە</label>
+                    <label class="block text-sm text-gray-400 mb-1">خاوەنی ڕیزبەندی</label>
                     <input type="text" name="sequence_owner" class="glass-input w-full px-4 py-2 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">ژمارەی مۆبایلی خاوەن</label>
+                    <input type="text" name="sequence_owner_phone" class="glass-input w-full px-4 py-2 rounded-lg">
                 </div>
                 <div>
                     <label class="block text-sm text-gray-400 mb-1">ژمارەی تابلۆی بارهەڵگر</label>
@@ -130,8 +159,9 @@
             <thead>
                 <tr class="border-b border-white/10 text-gray-400">
                     <th class="py-4 px-6 font-normal">#</th>
-                    <th class="py-4 px-6 font-normal">زنجیرە</th>
-                    <th class="py-4 px-6 font-normal">خاوەنی زنجیرە</th>
+                    <th class="py-4 px-6 font-normal">ڕیزبەندی</th>
+                    <th class="py-4 px-6 font-normal">خاوەنی ڕیزبەندی</th>
+                    <th class="py-4 px-6 font-normal">ژمارەی مۆبایلی خاوەن</th>
                     <th class="py-4 px-6 font-normal">ژمارەی تابلۆ</th>
                     <th class="py-4 px-6 font-normal">VIN</th>
                     <th class="py-4 px-6 font-normal">جۆری بارهەڵگر</th>
@@ -140,12 +170,13 @@
                     <th class="py-4 px-6 font-normal">کردارەکان</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody x-ref="tankerRows">
                 @foreach($tankers as $tanker)
-                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                <tr data-tanker-search="{{ $tanker->sequence_number }} {{ $tanker->sequence_owner }} {{ $tanker->sequence_owner_phone }} {{ $tanker->plate_number }} {{ $tanker->vin }} {{ $tanker->truck_type }} {{ $tanker->truck_color }} {{ $tanker->driver?->name }} {{ $tanker->driver?->phone }}" class="border-b border-white/5 hover:bg-white/5 transition-colors">
                     <td class="py-4 px-6">{{ $loop->iteration }}</td>
                     <td class="py-4 px-6">{{ $tanker->sequence_number }}</td>
                     <td class="py-4 px-6">{{ $tanker->sequence_owner ?: '-' }}</td>
+                    <td class="py-4 px-6">{{ $tanker->sequence_owner_phone ?: '-' }}</td>
                     <td class="py-4 px-6 font-medium text-lg">{{ $tanker->plate_number }}</td>
                     <td class="py-4 px-6">{{ $tanker->vin ?: '-' }}</td>
                     <td class="py-4 px-6">{{ $tanker->truck_type }}</td>
@@ -169,7 +200,11 @@
                 @endforeach
                 @if($tankers->isEmpty())
                 <tr>
-                    <td colspan="9" class="py-8 text-center text-gray-400">هیچ بارهەڵگرێک نەدۆزرایەوە.</td>
+                    <td colspan="10" class="py-8 text-center text-gray-400">هیچ بارهەڵگرێک نەدۆزرایەوە.</td>
+                </tr>
+                @else
+                <tr x-cloak x-show="!hasSearchResults">
+                    <td colspan="10" class="py-8 text-center text-gray-400">هیچ بارهەڵگرێک نەدۆزرایەوە.</td>
                 </tr>
                 @endif
             </tbody>
@@ -189,12 +224,16 @@
                 @csrf
                 @method('PUT')
                 <div>
-                    <label class="block text-sm text-gray-400 mb-1">زنجیرە</label>
+                    <label class="block text-sm text-gray-400 mb-1">ڕیزبەندی</label>
                     <input type="text" name="sequence_number" x-model="editTanker.sequence_number" required class="glass-input w-full px-4 py-2 rounded-lg">
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-400 mb-1">خاوەنی زنجیرە</label>
+                    <label class="block text-sm text-gray-400 mb-1">خاوەنی ڕیزبەندی</label>
                     <input type="text" name="sequence_owner" x-model="editTanker.sequence_owner" class="glass-input w-full px-4 py-2 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">ژمارەی مۆبایلی خاوەن</label>
+                    <input type="text" name="sequence_owner_phone" x-model="editTanker.sequence_owner_phone" class="glass-input w-full px-4 py-2 rounded-lg">
                 </div>
                 <div>
                     <label class="block text-sm text-gray-400 mb-1">ژمارەی تابلۆی بارهەڵگر</label>

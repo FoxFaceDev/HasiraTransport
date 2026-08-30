@@ -13,29 +13,34 @@ class TankerController extends Controller
     {
         $query = Tanker::with('driver');
 
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->search;
-            $query->where('plate_number', 'like', "%{$search}%")
-                  ->orWhere('sequence_number', 'like', "%{$search}%")
-                  ->orWhere('sequence_owner', 'like', "%{$search}%")
-                  ->orWhere('vin', 'like', "%{$search}%")
-                  ->orWhere('truck_color', 'like', "%{$search}%")
-                  ->orWhereHas('driver', function ($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%");
-                  });
+            $query->where(function ($query) use ($search) {
+                $query->where('plate_number', 'like', "%{$search}%")
+                    ->orWhere('sequence_number', 'like', "%{$search}%")
+                    ->orWhere('sequence_owner', 'like', "%{$search}%")
+                    ->orWhere('sequence_owner_phone', 'like', "%{$search}%")
+                    ->orWhere('vin', 'like', "%{$search}%")
+                    ->orWhere('truck_type', 'like', "%{$search}%")
+                    ->orWhere('truck_color', 'like', "%{$search}%")
+                    ->orWhereHas('driver', function ($driverQuery) use ($search) {
+                        $driverQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    });
+            });
         }
 
         $tankers = $query->get();
         $drivers = Driver::all();
         $maxTankers = Setting::where('key', 'max_tankers')->value('value') ?? 1039;
-        
+
         return view('tankers.index', compact('tankers', 'drivers', 'maxTankers'));
     }
 
     public function store(Request $request)
     {
         $maxTankers = Setting::where('key', 'max_tankers')->value('value') ?? 1039;
-        
+
         if (Tanker::count() >= $maxTankers) {
             return back()->withErrors(['limit' => 'Cannot add more tankers. Maximum limit reached.']);
         }
@@ -43,8 +48,9 @@ class TankerController extends Controller
         $request->validate([
             'sequence_number' => 'required|string|max:255',
             'sequence_owner' => 'nullable|string|max:255',
+            'sequence_owner_phone' => 'nullable|string|max:255',
             'plate_number' => 'required|string|unique:tankers,plate_number',
-            'vin' => 'nullable|string|max:255|unique:tankers,vin',
+            'vin' => 'nullable|string|max:255',
             'truck_type' => 'required|string|max:255',
             'truck_color' => 'nullable|string|max:255',
             'driver_id' => 'required|exists:drivers,id',
@@ -53,6 +59,7 @@ class TankerController extends Controller
         Tanker::create([
             'sequence_number' => $request->sequence_number,
             'sequence_owner' => $request->sequence_owner,
+            'sequence_owner_phone' => $request->sequence_owner_phone,
             'plate_number' => $request->plate_number,
             'vin' => $request->vin,
             'truck_type' => $request->truck_type,
@@ -68,8 +75,9 @@ class TankerController extends Controller
         $request->validate([
             'sequence_number' => 'required|string|max:255',
             'sequence_owner' => 'nullable|string|max:255',
-            'plate_number' => 'required|string|unique:tankers,plate_number,' . $tanker->id,
-            'vin' => 'nullable|string|max:255|unique:tankers,vin,' . $tanker->id,
+            'sequence_owner_phone' => 'nullable|string|max:255',
+            'plate_number' => 'required|string|unique:tankers,plate_number,'.$tanker->id,
+            'vin' => 'nullable|string|max:255',
             'truck_type' => 'required|string|max:255',
             'truck_color' => 'nullable|string|max:255',
             'driver_id' => 'required|exists:drivers,id',
@@ -78,6 +86,7 @@ class TankerController extends Controller
         $tanker->update([
             'sequence_number' => $request->sequence_number,
             'sequence_owner' => $request->sequence_owner,
+            'sequence_owner_phone' => $request->sequence_owner_phone,
             'plate_number' => $request->plate_number,
             'vin' => $request->vin,
             'truck_type' => $request->truck_type,
@@ -91,6 +100,7 @@ class TankerController extends Controller
     public function destroy(Tanker $tanker)
     {
         $tanker->delete();
+
         return back()->with('success', 'بارهەڵگرەکە سڕایەوە.');
     }
 

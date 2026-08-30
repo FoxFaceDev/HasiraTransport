@@ -1,12 +1,37 @@
 @extends('layouts.layout')
 
 @section('content')
-<div x-data="{ showAddModal: false, showEditModal: false, editDriver: null }" class="space-y-6">
+<div
+    x-data="{
+        showAddModal: false,
+        showEditModal: false,
+        editDriver: null,
+        search: @js(request('search', '')),
+        hasSearchResults: true,
+        filterDrivers() {
+            const query = this.search.trim().toLocaleLowerCase();
+            let visibleRows = 0;
+
+            this.$refs.driverRows.querySelectorAll('[data-driver-search]').forEach((row) => {
+                const matches = query === '' || row.dataset.driverSearch.toLocaleLowerCase().includes(query);
+                row.style.display = matches ? '' : 'none';
+
+                if (matches) {
+                    visibleRows++;
+                }
+            });
+
+            this.hasSearchResults = visibleRows > 0;
+        }
+    }"
+    x-init="$nextTick(() => filterDrivers())"
+    class="space-y-6"
+>
     <div class="flex justify-between items-center">
         <h2 class="text-2xl font-bold">بەڕێوەبردنی شۆفێرەکان</h2>
         <div class="flex items-center gap-4">
-            <form action="{{ route('drivers.index') }}" method="GET" class="flex gap-2">
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="گەڕان بەدوای شۆفێر..." dir="rtl" class="glass-input px-4 py-2 rounded-lg text-sm w-64 text-right">
+            <form action="{{ route('drivers.index') }}" method="GET" @submit.prevent="filterDrivers()" class="flex gap-2">
+                <input type="search" name="search" x-model="search" @input.debounce.100ms="filterDrivers()" value="{{ request('search') }}" placeholder="گەڕان بەدوای شۆفێر..." dir="rtl" autocomplete="off" class="glass-input px-4 py-2 rounded-lg text-sm w-64 text-right">
                 <button type="submit" class="btn-secondary px-4 py-2 rounded-lg text-sm font-semibold">گەڕان</button>
             </form>
             @can('create drivers')
@@ -31,9 +56,9 @@
                     <th class="py-4 px-6 font-normal">کردارەکان</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody x-ref="driverRows">
                 @foreach($drivers as $driver)
-                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                <tr data-driver-search="{{ $driver->name }} {{ $driver->phone }} {{ $driver->license_number }} {{ $driver->certificate_number }}" class="border-b border-white/5 hover:bg-white/5 transition-colors">
                     <td class="py-4 px-6">{{ $loop->iteration }}</td>
                     <td class="py-4 px-6 font-medium text-lg">{{ $driver->name }}</td>
                     <td class="py-4 px-6">{{ $driver->phone }}</td>
@@ -66,6 +91,10 @@
                 @endforeach
                 @if($drivers->isEmpty())
                 <tr>
+                    <td colspan="6" class="py-8 text-center text-gray-400">هیچ شۆفێرێک نەدۆزرایەوە.</td>
+                </tr>
+                @else
+                <tr x-cloak x-show="!hasSearchResults">
                     <td colspan="6" class="py-8 text-center text-gray-400">هیچ شۆفێرێک نەدۆزرایەوە.</td>
                 </tr>
                 @endif

@@ -11,14 +11,18 @@ class DriverController extends Controller
     {
         $query = Driver::query();
 
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->search;
-            $query->where('name', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('license_number', 'like', "%{$search}%");
+            $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('license_number', 'like', "%{$search}%")
+                    ->orWhere('certificate_number', 'like', "%{$search}%");
+            });
         }
 
         $drivers = $query->get();
+
         return view('drivers.index', compact('drivers'));
     }
 
@@ -67,6 +71,7 @@ class DriverController extends Controller
     public function destroy(Driver $driver)
     {
         $driver->delete();
+
         return back()->with('success', 'شۆفێرەکە سڕایەوە.');
     }
 }
