@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BlockController;
 use App\Http\Controllers\DriverController;
 use App\Http\Controllers\ProfileController;
@@ -64,6 +65,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports', [ReportController::class, 'index'])->middleware('can:view reports')->name('reports.index');
     Route::get('/reports/{file}/download', [ReportController::class, 'download'])->middleware('can:download reports')->name('reports.download');
 
+    Route::get('/audit-logs', [AuditLogController::class, 'index'])
+        ->middleware('can:view audit logs')
+        ->name('audit-logs.index');
+
     Route::middleware('can:manage users')->group(function () {
         Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
         Route::post('/users', [UserManagementController::class, 'store'])->name('users.store');
@@ -80,5 +85,5 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');

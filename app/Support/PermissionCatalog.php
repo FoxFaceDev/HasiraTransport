@@ -39,6 +39,9 @@ class PermissionCatalog
                 'manage users' => 'بەڕێوەبردنی بەکارهێنەران',
                 'manage roles' => 'بەڕێوەبردنی ڕۆڵ و دەسەڵاتەکان',
             ],
+            'چاودێری سیستەم' => [
+                'view audit logs' => 'بینینی تۆماری چاودێری',
+            ],
         ];
     }
 

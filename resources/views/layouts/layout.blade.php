@@ -61,6 +61,13 @@
             </a>
             @endcan
 
+            @can('view audit logs')
+            <a href="{{ route('audit-logs.index') }}" class="nav-link {{ request()->routeIs('audit-logs.*') ? 'is-active' : '' }}">
+                <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m5.6-4.4A10.9 10.9 0 0 1 12 2a10.9 10.9 0 0 1-8.6 3.6A11.8 11.8 0 0 0 3 9c0 5.2 3.8 10 9 11 5.2-1 9-5.8 9-11 0-1.2-.1-2.3-.4-3.4Z"/></svg>
+                <span>تۆماری چاودێری</span>
+            </a>
+            @endcan
+
             @role('super_admin')
             <a href="{{ route('roles.index') }}" class="nav-link {{ request()->routeIs('roles.*') ? 'is-active' : '' }}">
                 <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7.4-3a7.4 7.4 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a8 8 0 0 0-1.8-1L14.8 3h-4l-.4 3.1a8 8 0 0 0-1.8 1l-2.4-1-2 3.4 2 1.5a7.4 7.4 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a8 8 0 0 0 1.8 1l.4 3.1h4l.4-3.1a8 8 0 0 0 1.8-1l2.4 1 2-3.4-2-1.5a7.4 7.4 0 0 0 .1-1Z"/></svg>
