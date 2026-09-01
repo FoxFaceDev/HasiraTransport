@@ -48,5 +48,7 @@ it('renders the realtime client-side search data and input handler', function ()
         ->get(route('drivers.index'))
         ->assertOk()
         ->assertSee('@input.debounce.100ms="filterDrivers()"', false)
+        ->assertSee('flex flex-nowrap items-center gap-2 whitespace-nowrap', false)
+        ->assertSee('rounded-lg border border-blue-200 bg-blue-50', false)
         ->assertSee('data-driver-search="Realtime Search Driver 7701234567 LICENSE-987 CERTIFICATE-654"', false);
 });

@@ -83,6 +83,13 @@
                 <span>نەهاتووەکان</span>
             </a>
             @endcan
+
+            @if(auth()->user()->can('view drivers') || auth()->user()->can('view tankers') || auth()->user()->can('view gatekeeper'))
+            <a href="{{ route('blocks.index') }}" class="nav-link {{ request()->routeIs('blocks.*') ? 'is-active' : '' }}">
+                <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M18.4 5.6a9 9 0 1 1-12.8 0 9 9 0 0 1 12.8 0ZM5.8 18.2 18.2 5.8"/></svg>
+                <span>بلۆککراوەکان</span>
+            </a>
+            @endif
         </nav>
 
         <div class="p-3 border-t border-slate-100">

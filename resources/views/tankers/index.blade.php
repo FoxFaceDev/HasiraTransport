@@ -30,7 +30,7 @@
     <div class="flex justify-between items-center">
         <div>
             <h2 class="text-2xl font-bold">خەتەکان</h2>
-            <p class="text-gray-400 mt-1">کۆی گشتی خەتەکان: {{ $tankers->count() }} / {{ $maxTankers }}</p>
+            <p class="text-gray-400 mt-1">کۆی گشتی خەتەکان: {{ $tankerCount }} / {{ $maxTankers }}</p>
         </div>
         
         <div class="flex items-center gap-4">
@@ -40,7 +40,7 @@
             </form>
             
             @can('create tankers')
-            @if($tankers->count() < $maxTankers)
+            @if($tankerCount < $maxTankers)
             <button type="button" @click="showAddModal = true" class="btn-primary px-4 py-2 rounded-lg flex items-center space-x-2 space-x-reverse">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                 <span>زیادکردنی بارهەڵگر</span>
@@ -100,50 +100,6 @@
                     <label class="block text-sm text-gray-400 mb-1">ڕەنگی بارهەڵگر</label>
                     <input type="text" name="truck_color" class="glass-input w-full px-4 py-2 rounded-lg">
                 </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">ناوی شۆفێر</label>
-                    <div x-data="{
-                        search: '',
-                        open: false,
-                        selectedId: '',
-                        selectedName: '',
-                        drivers: [
-                            @foreach($drivers as $driver)
-                                { id: '{{ $driver->id }}', name: '{{ $driver->name }}', phone: '{{ $driver->phone }}' },
-                            @endforeach
-                        ],
-                        get filteredDrivers() {
-                            if (this.search === '') return this.drivers;
-                            return this.drivers.filter(d => d.name.includes(this.search) || d.phone.includes(this.search));
-                        },
-                        selectDriver(driver) {
-                            this.selectedId = driver.id;
-                            this.selectedName = driver.name + ' (' + driver.phone + ')';
-                            this.search = '';
-                            this.open = false;
-                        }
-                    }" class="relative">
-                        <input type="hidden" name="driver_id" :value="selectedId" required>
-                        
-                        <div @click="open = !open" @click.away="open = false" class="glass-input w-full px-4 py-2 rounded-lg flex justify-between items-center cursor-pointer">
-                            <span x-text="selectedName || 'شۆفێر هەڵبژێرە...'" :class="selectedName ? 'text-slate-900' : 'text-gray-400'"></span>
-                            <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </div>
-                        
-                        <div x-show="open" x-transition class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden" style="display: none;">
-                            <div class="p-2 border-b border-slate-100">
-                                <input type="text" x-model="search" placeholder="گەڕان..." class="glass-input w-full px-3 py-1.5 rounded-lg text-sm" @click.stop>
-                            </div>
-                            <ul class="max-h-48 overflow-y-auto p-1">
-                                <template x-for="driver in filteredDrivers" :key="driver.id">
-                                    <li @click="selectDriver(driver)" class="px-3 py-2 hover:bg-blue-50 cursor-pointer rounded-lg text-sm transition-colors" x-text="driver.name + ' (' + driver.phone + ')'"></li>
-                                </template>
-                                <li x-show="filteredDrivers.length === 0" class="px-3 py-2 text-gray-400 text-sm text-center">هیچ شۆفێرێک نەدۆزرایەوە</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                
                 <div class="pt-4 flex justify-end space-x-3 space-x-reverse">
                     <button type="button" @click="showAddModal = false" class="btn-secondary px-4 py-2 rounded-lg">پاشگەزبوونەوە</button>
                     <button type="submit" class="btn-primary px-6 py-2 rounded-lg font-medium">زیادکردن</button>
@@ -158,7 +114,6 @@
         <table class="w-full text-right border-collapse">
             <thead>
                 <tr class="border-b border-white/10 text-gray-400">
-                    <th class="py-4 px-6 font-normal">#</th>
                     <th class="py-4 px-6 font-normal">ڕیزبەندی</th>
                     <th class="py-4 px-6 font-normal">خاوەنی ڕیزبەندی</th>
                     <th class="py-4 px-6 font-normal">ژمارەی مۆبایلی خاوەن</th>
@@ -166,45 +121,61 @@
                     <th class="py-4 px-6 font-normal">VIN</th>
                     <th class="py-4 px-6 font-normal">جۆری بارهەڵگر</th>
                     <th class="py-4 px-6 font-normal">ڕەنگی بارهەڵگر</th>
-                    <th class="py-4 px-6 font-normal">ناوی شۆفێر</th>
                     <th class="py-4 px-6 font-normal">کردارەکان</th>
                 </tr>
             </thead>
             <tbody x-ref="tankerRows">
                 @foreach($tankers as $tanker)
-                <tr data-tanker-search="{{ $tanker->sequence_number }} {{ $tanker->sequence_owner }} {{ $tanker->sequence_owner_phone }} {{ $tanker->plate_number }} {{ $tanker->vin }} {{ $tanker->truck_type }} {{ $tanker->truck_color }} {{ $tanker->driver?->name }} {{ $tanker->driver?->phone }}" class="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td class="py-4 px-6">{{ $loop->iteration }}</td>
+                @php($isBlocked = $tanker->blocked_at)
+                <tr data-tanker-search="{{ $tanker->sequence_number }} {{ $tanker->sequence_owner }} {{ $tanker->sequence_owner_phone }} {{ $tanker->plate_number }} {{ $tanker->vin }} {{ $tanker->truck_type }} {{ $tanker->truck_color }}@if($isBlocked) بلۆککراوە@endif" class="border-b border-white/5 hover:bg-white/5 transition-colors {{ $isBlocked ? 'blocked-row' : '' }}">
                     <td class="py-4 px-6">{{ $tanker->sequence_number }}</td>
                     <td class="py-4 px-6">{{ $tanker->sequence_owner ?: '-' }}</td>
                     <td class="py-4 px-6">{{ $tanker->sequence_owner_phone ?: '-' }}</td>
-                    <td class="py-4 px-6 font-medium text-lg">{{ $tanker->plate_number }}</td>
+                    <td class="py-4 px-6 font-medium text-lg">
+                        <div class="flex items-center gap-2">
+                            <span>{{ $tanker->plate_number }}</span>
+                            @if($tanker->blocked_at)<span class="blocked-badge">خەت بلۆککراوە</span>@endif
+                        </div>
+                    </td>
                     <td class="py-4 px-6">{{ $tanker->vin ?: '-' }}</td>
                     <td class="py-4 px-6">{{ $tanker->truck_type }}</td>
                     <td class="py-4 px-6">{{ $tanker->truck_color ?: '-' }}</td>
-                    <td class="py-4 px-6 text-gray-300">
-                        {{ $tanker->driver ? $tanker->driver->name : '-' }}
-                    </td>
-                    <td class="py-4 px-6 space-x-2 space-x-reverse">
+                    <td class="min-w-[250px] py-4 px-6">
+                        <div class="flex flex-nowrap items-center gap-2 whitespace-nowrap">
                         @can('edit tankers')
-                        <button @click="editTanker = {{ $tanker->toJson() }}; showEditModal = true" class="text-blue-400 hover:text-blue-300">دەستکاری</button>
-                        @endcan
-                        @can('delete tankers')
-                        <form action="{{ route('tankers.destroy', $tanker) }}" method="POST" class="inline" onsubmit="return confirm('دڵنیای لە سڕینەوەی ئەم بارهەڵگرە؟')">
+                        <button type="button" @click="editTanker = {{ $tanker->toJson() }}; showEditModal = true" class="inline-flex shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100">دەستکاری</button>
+                        @if($tanker->blocked_at)
+                        <form action="{{ route('tankers.unblock', $tanker) }}" method="POST" class="shrink-0" onsubmit="return confirm('دڵنیای لە لابردنی بلۆکی ئەم خەتە؟')">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="text-red-400 hover:text-red-300">سڕینەوە</button>
+                            <button type="submit" class="inline-flex items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100">لابردنی بلۆک</button>
+                        </form>
+                        @else
+                        <form action="{{ route('tankers.block', $tanker) }}" method="POST" class="shrink-0" onsubmit="return confirm('دڵنیای لە بلۆککردنی ئەم خەتە؟')">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="inline-flex items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:border-amber-300 hover:bg-amber-100">بلۆککردن</button>
+                        </form>
+                        @endif
+                        @endcan
+                        @can('delete tankers')
+                        <form action="{{ route('tankers.destroy', $tanker) }}" method="POST" class="shrink-0" onsubmit="return confirm('دڵنیای لە سڕینەوەی ئەم بارهەڵگرە؟')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="inline-flex items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100">سڕینەوە</button>
                         </form>
                         @endcan
+                        </div>
                     </td>
                 </tr>
                 @endforeach
                 @if($tankers->isEmpty())
                 <tr>
-                    <td colspan="10" class="py-8 text-center text-gray-400">هیچ بارهەڵگرێک نەدۆزرایەوە.</td>
+                    <td colspan="8" class="py-8 text-center text-gray-400">هیچ بارهەڵگرێک نەدۆزرایەوە.</td>
                 </tr>
                 @else
                 <tr x-cloak x-show="!hasSearchResults">
-                    <td colspan="10" class="py-8 text-center text-gray-400">هیچ بارهەڵگرێک نەدۆزرایەوە.</td>
+                    <td colspan="8" class="py-8 text-center text-gray-400">هیچ بارهەڵگرێک نەدۆزرایەوە.</td>
                 </tr>
                 @endif
             </tbody>
@@ -251,52 +222,6 @@
                     <label class="block text-sm text-gray-400 mb-1">ڕەنگی بارهەڵگر</label>
                     <input type="text" name="truck_color" x-model="editTanker.truck_color" class="glass-input w-full px-4 py-2 rounded-lg">
                 </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">ناوی شۆفێر</label>
-                    <div x-data="{
-                        search: '',
-                        open: false,
-                        drivers: [
-                            @foreach($drivers as $driver)
-                                { id: '{{ $driver->id }}', name: '{{ $driver->name }}', phone: '{{ $driver->phone }}' },
-                            @endforeach
-                        ],
-                        get filteredDrivers() {
-                            if (this.search === '') return this.drivers;
-                            return this.drivers.filter(d => d.name.includes(this.search) || d.phone.includes(this.search));
-                        },
-                        get selectedName() {
-                            if (!editTanker || !editTanker.driver_id) return 'شۆفێر هەڵبژێرە...';
-                            const driver = this.drivers.find(d => d.id == editTanker.driver_id);
-                            return driver ? driver.name + ' (' + driver.phone + ')' : 'شۆفێر هەڵبژێرە...';
-                        },
-                        selectDriver(driver) {
-                            editTanker.driver_id = driver.id;
-                            this.search = '';
-                            this.open = false;
-                        }
-                    }" class="relative">
-                        <input type="hidden" name="driver_id" :value="editTanker ? editTanker.driver_id : ''" required>
-                        
-                        <div @click="open = !open" @click.away="open = false" class="glass-input w-full px-4 py-2 rounded-lg flex justify-between items-center cursor-pointer">
-                            <span x-text="selectedName" :class="editTanker && editTanker.driver_id ? 'text-slate-900' : 'text-gray-400'"></span>
-                            <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </div>
-                        
-                        <div x-show="open" x-transition class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden" style="display: none;">
-                            <div class="p-2 border-b border-slate-100">
-                                <input type="text" x-model="search" placeholder="گەڕان..." class="glass-input w-full px-3 py-1.5 rounded-lg text-sm" @click.stop>
-                            </div>
-                            <ul class="max-h-48 overflow-y-auto p-1">
-                                <template x-for="driver in filteredDrivers" :key="driver.id">
-                                    <li @click="selectDriver(driver)" class="px-3 py-2 hover:bg-blue-50 cursor-pointer rounded-lg text-sm transition-colors" x-text="driver.name + ' (' + driver.phone + ')'"></li>
-                                </template>
-                                <li x-show="filteredDrivers.length === 0" class="px-3 py-2 text-gray-400 text-sm text-center">هیچ شۆفێرێک نەدۆزرایەوە</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                
                 <div class="pt-4 flex justify-end space-x-3 space-x-reverse">
                     <button type="button" @click="showEditModal = false" class="btn-secondary px-4 py-2 rounded-lg">پاشگەزبوونەوە</button>
                     <button type="submit" class="btn-primary px-6 py-2 rounded-lg font-medium">نوێکردنەوە</button>

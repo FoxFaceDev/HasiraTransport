@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Driver;
 use App\Models\Setting;
 use App\Models\Tanker;
 use Illuminate\Http\Request;
@@ -11,7 +10,7 @@ class TankerController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Tanker::with('driver');
+        $query = Tanker::query()->orderBy('id');
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -22,19 +21,15 @@ class TankerController extends Controller
                     ->orWhere('sequence_owner_phone', 'like', "%{$search}%")
                     ->orWhere('vin', 'like', "%{$search}%")
                     ->orWhere('truck_type', 'like', "%{$search}%")
-                    ->orWhere('truck_color', 'like', "%{$search}%")
-                    ->orWhereHas('driver', function ($driverQuery) use ($search) {
-                        $driverQuery->where('name', 'like', "%{$search}%")
-                            ->orWhere('phone', 'like', "%{$search}%");
-                    });
+                    ->orWhere('truck_color', 'like', "%{$search}%");
             });
         }
 
         $tankers = $query->get();
-        $drivers = Driver::all();
+        $tankerCount = Tanker::query()->count();
         $maxTankers = Setting::where('key', 'max_tankers')->value('value') ?? 1039;
 
-        return view('tankers.index', compact('tankers', 'drivers', 'maxTankers'));
+        return view('tankers.index', compact('tankers', 'tankerCount', 'maxTankers'));
     }
 
     public function store(Request $request)
@@ -53,7 +48,6 @@ class TankerController extends Controller
             'vin' => 'nullable|string|max:255',
             'truck_type' => 'required|string|max:255',
             'truck_color' => 'nullable|string|max:255',
-            'driver_id' => 'required|exists:drivers,id',
         ]);
 
         Tanker::create([
@@ -64,7 +58,6 @@ class TankerController extends Controller
             'vin' => $request->vin,
             'truck_type' => $request->truck_type,
             'truck_color' => $request->truck_color,
-            'driver_id' => $request->driver_id,
         ]);
 
         return back()->with('success', 'بارهەڵگرەکە بە سەرکەوتوویی زیادکرا.');
@@ -80,7 +73,6 @@ class TankerController extends Controller
             'vin' => 'nullable|string|max:255',
             'truck_type' => 'required|string|max:255',
             'truck_color' => 'nullable|string|max:255',
-            'driver_id' => 'required|exists:drivers,id',
         ]);
 
         $tanker->update([
@@ -91,7 +83,6 @@ class TankerController extends Controller
             'vin' => $request->vin,
             'truck_type' => $request->truck_type,
             'truck_color' => $request->truck_color,
-            'driver_id' => $request->driver_id,
         ]);
 
         return back()->with('success', 'زانیارییەکانی بارهەڵگر نوێکرایەوە.');
@@ -102,6 +93,20 @@ class TankerController extends Controller
         $tanker->delete();
 
         return back()->with('success', 'بارهەڵگرەکە سڕایەوە.');
+    }
+
+    public function block(Tanker $tanker)
+    {
+        $tanker->update(['blocked_at' => now()]);
+
+        return back()->with('success', 'خەتەکە بلۆک کرا.');
+    }
+
+    public function unblock(Tanker $tanker)
+    {
+        $tanker->update(['blocked_at' => null]);
+
+        return back()->with('success', 'بلۆکی خەتەکە لابرا.');
     }
 
     public function updateSetting(Request $request)

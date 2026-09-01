@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BlockController;
 use App\Http\Controllers\DriverController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QueueController;
@@ -35,12 +36,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/drivers', [DriverController::class, 'store'])->middleware('can:create drivers')->name('drivers.store');
     Route::put('/drivers/{driver}', [DriverController::class, 'update'])->middleware('can:edit drivers')->name('drivers.update');
     Route::delete('/drivers/{driver}', [DriverController::class, 'destroy'])->middleware('can:delete drivers')->name('drivers.destroy');
+    Route::patch('/drivers/{driver}/block', [DriverController::class, 'block'])->middleware('can:edit drivers')->name('drivers.block');
+    Route::delete('/drivers/{driver}/block', [DriverController::class, 'unblock'])->middleware('can:edit drivers')->name('drivers.unblock');
 
     Route::get('/tankers', [TankerController::class, 'index'])->middleware('can:view tankers')->name('tankers.index');
     Route::post('/tankers', [TankerController::class, 'store'])->middleware('can:create tankers')->name('tankers.store');
     Route::put('/tankers/{tanker}', [TankerController::class, 'update'])->middleware('can:edit tankers')->name('tankers.update');
     Route::delete('/tankers/{tanker}', [TankerController::class, 'destroy'])->middleware('can:delete tankers')->name('tankers.destroy');
+    Route::patch('/tankers/{tanker}/block', [TankerController::class, 'block'])->middleware('can:edit tankers')->name('tankers.block');
+    Route::delete('/tankers/{tanker}/block', [TankerController::class, 'unblock'])->middleware('can:edit tankers')->name('tankers.unblock');
     Route::post('/settings/max-tankers', [TankerController::class, 'updateSetting'])->middleware('can:manage tanker settings')->name('settings.max-tankers');
+
+    Route::get('/blocks', [BlockController::class, 'index'])->name('blocks.index');
 
     Route::get('/gatekeeper', [QueueController::class, 'index'])->middleware('can:view gatekeeper')->name('gatekeeper.index');
     Route::get('/gatekeeper/filter/{status}', [QueueController::class, 'filter'])->middleware('can:view gatekeeper')->name('gatekeeper.filter');

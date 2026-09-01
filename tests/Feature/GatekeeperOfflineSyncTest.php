@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Driver;
 use App\Models\GatekeeperSyncOperation;
 use App\Models\Queue;
 use App\Models\Tanker;
@@ -17,17 +16,10 @@ beforeEach(function () {
     $this->gatekeeper = User::factory()->create();
     $this->gatekeeper->assignRole('gatekeeper');
 
-    $driver = Driver::create([
-        'name' => 'Offline Driver',
-        'phone' => '07500000000',
-        'license_number' => 'LIC-1',
-        'has_certificate' => true,
-    ]);
-
     $this->tanker = Tanker::create([
-        'driver_id' => $driver->id,
         'sequence_number' => '12',
         'sequence_owner' => 'Owner',
+        'sequence_owner_phone' => '07501112233',
         'plate_number' => 'TEST-100',
         'vin' => 'VIN-OFFLINE-1',
         'truck_type' => 'Tanker',
@@ -40,7 +32,10 @@ it('returns the complete gatekeeper snapshot', function () {
         ->getJson(route('gatekeeper.sync.snapshot'))
         ->assertOk()
         ->assertJsonPath('tankers.0.id', $this->tanker->id)
-        ->assertJsonPath('tankers.0.driver.name', 'Offline Driver')
+        ->assertJsonPath('tankers.0.blocked_at', null)
+        ->assertJsonPath('tankers.0.sequence_owner', 'Owner')
+        ->assertJsonPath('tankers.0.sequence_owner_phone', '07501112233')
+        ->assertJsonMissingPath('tankers.0.driver')
         ->assertJsonPath('tankers.0.queue.status', 'pending');
 });
 
@@ -50,10 +45,26 @@ it('embeds the initial truck snapshot in the gatekeeper page', function () {
         ->assertOk()
         ->assertSee('gatekeeperQueueManager', false)
         ->assertSee('TEST-100', false)
-        ->assertSee('Offline Driver', false)
+        ->assertSee('Owner', false)
+        ->assertSee('07501112233', false)
+        ->assertSee('خاوەنی خەت')
+        ->assertSee('مۆبایل')
+        ->assertDontSee('ناوی شۆفێر')
+        ->assertDontSee('شەهادە')
+        ->assertSee('getBlockReason(tanker)', false)
+        ->assertSee('blocked-badge', false)
         ->assertDontSee('<th class="py-3 px-4 font-normal">#</th>', false)
         ->assertDontSee('x-text="index + 1"', false);
 });
+
+it('renders realtime search on every status page', function (string $status) {
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.filter', $status))
+        ->assertOk()
+        ->assertSee('type="search"', false)
+        ->assertSee('@input.debounce.100ms="search = $event.target.value"', false)
+        ->assertSee('autocomplete="off"', false);
+})->with(['green', 'yellow', 'red']);
 
 it('applies queued operations exactly once', function () {
     $statusUuid = (string) Str::uuid();

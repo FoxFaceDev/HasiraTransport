@@ -9,7 +9,7 @@ class DriverController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Driver::query();
+        $query = Driver::query()->orderBy('id');
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -73,5 +73,19 @@ class DriverController extends Controller
         $driver->delete();
 
         return back()->with('success', 'شۆفێرەکە سڕایەوە.');
+    }
+
+    public function block(Driver $driver)
+    {
+        $driver->update(['blocked_at' => now()]);
+
+        return back()->with('success', 'شۆفێرەکە بلۆک کرا.');
+    }
+
+    public function unblock(Driver $driver)
+    {
+        $driver->update(['blocked_at' => null]);
+
+        return back()->with('success', 'بلۆکی شۆفێرەکە لابرا.');
     }
 }

@@ -115,16 +115,6 @@
             color: #94a3b8;
         }
 
-        .certificate-yes {
-            color: #047857;
-            font-weight: bold;
-        }
-
-        .certificate-no {
-            color: #be123c;
-            font-weight: bold;
-        }
-
         .empty-state {
             color: #64748b;
             font-size: 12pt;
@@ -198,8 +188,8 @@
             <tr>
                 <th width="10%">زنجیرە</th>
                 <th width="14%">ژمارەی تەنکەر</th>
-                <th width="17%">ناوی شۆفێر</th>
-                <th width="13%">شەهادە</th>
+                <th width="17%">خاوەنی خەت</th>
+                <th width="13%">مۆبایل</th>
                 <th width="22%">تێبینی</th>
                 <th width="13%">بەرواری دیاریکراو</th>
                 <th width="11%">کاتی دیاریکراو</th>
@@ -211,14 +201,8 @@
             <tr>
                 <td class="center">{{ $tanker->sequence_number ?: '-' }}</td>
                 <td class="center">{{ $tanker->plate_number ?: '-' }}</td>
-                <td>{{ $tanker->driver?->name ?? '-' }}</td>
-                <td class="center">
-                    @if($tanker->driver?->has_certificate)
-                        <span class="certificate-yes">{{ $tanker->driver->certificate_number ?: 'هەیە' }}</span>
-                    @else
-                        <span class="certificate-no">نییە</span>
-                    @endif
-                </td>
+                <td>{{ $tanker->sequence_owner ?: '-' }}</td>
+                <td class="center">{{ $tanker->sequence_owner_phone ?: '-' }}</td>
                 <td class="{{ $queue?->note ? '' : 'muted' }}">{{ $queue?->note ?: '-' }}</td>
                 <td class="center {{ $queue?->scheduled_date ? '' : 'muted' }}">{{ $queue?->scheduled_date ? \Carbon\Carbon::parse($queue->scheduled_date)->format('Y-m-d') : '-' }}</td>
                 <td class="center {{ $queue?->scheduled_time ? '' : 'muted' }}">{{ $queue?->scheduled_time ?: '-' }}</td>

@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Driver;
 use App\Models\Tanker;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -13,13 +12,6 @@ beforeEach(function () {
 
     $this->user = User::factory()->create();
     $this->user->assignRole('super_admin');
-    $this->driver = Driver::query()->create([
-        'name' => 'Truck Driver',
-        'phone' => '7701234567',
-        'license_number' => 'D1234567',
-        'has_certificate' => false,
-        'certificate_number' => null,
-    ]);
 });
 
 it('shows the renamed truck page and ranking labels', function () {
@@ -31,7 +23,6 @@ it('shows the renamed truck page and ranking labels', function () {
         'vin' => 'TEST-VIN-1',
         'truck_type' => 'MAN 2020',
         'truck_color' => 'سپی',
-        'driver_id' => $this->driver->id,
     ]);
 
     $this->actingAs($this->user)
@@ -41,9 +32,12 @@ it('shows the renamed truck page and ranking labels', function () {
         ->assertSee('ڕیزبەندی')
         ->assertSee('خاوەنی ڕیزبەندی')
         ->assertSee('7707654321')
+        ->assertDontSee('ناوی شۆفێر')
         ->assertDontSee('خاوەنی زنجیرە')
+        ->assertDontSee('<th class="py-4 px-6 font-normal">#</th>', false)
         ->assertSee('@input.debounce.100ms="filterTankers()"', false)
-        ->assertSee('data-tanker-search="1 خاوەنی تاقیکردنەوە 7707654321 TEST-PLATE-1 TEST-VIN-1 MAN 2020 سپی Truck Driver 7701234567"', false);
+        ->assertSee('flex flex-nowrap items-center gap-2 whitespace-nowrap', false)
+        ->assertSee('data-tanker-search="1 خاوەنی تاقیکردنەوە 7707654321 TEST-PLATE-1 TEST-VIN-1 MAN 2020 سپی"', false);
 });
 
 it('stores the sequence owner phone and permits workbook-compatible duplicate vins', function () {
@@ -55,7 +49,6 @@ it('stores the sequence owner phone and permits workbook-compatible duplicate vi
         'vin' => 'SHARED-VIN',
         'truck_type' => 'MAN 2020',
         'truck_color' => 'White',
-        'driver_id' => $this->driver->id,
     ]);
 
     $this->actingAs($this->user)
@@ -67,10 +60,12 @@ it('stores the sequence owner phone and permits workbook-compatible duplicate vi
             'vin' => 'SHARED-VIN',
             'truck_type' => 'MAN 2021',
             'truck_color' => 'Blue',
-            'driver_id' => $this->driver->id,
         ])
         ->assertSessionHasNoErrors();
 
+    $newTanker = Tanker::query()->where('plate_number', 'TEST-PLATE-2')->firstOrFail();
+
     expect(Tanker::query()->where('vin', 'SHARED-VIN')->count())->toBe(2)
-        ->and(Tanker::query()->where('plate_number', 'TEST-PLATE-2')->value('sequence_owner_phone'))->toBe('7702222222');
+        ->and($newTanker->sequence_owner_phone)->toBe('7702222222')
+        ->and($newTanker->driver_id)->toBeNull();
 });

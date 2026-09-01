@@ -58,9 +58,14 @@
             </thead>
             <tbody x-ref="driverRows">
                 @foreach($drivers as $driver)
-                <tr data-driver-search="{{ $driver->name }} {{ $driver->phone }} {{ $driver->license_number }} {{ $driver->certificate_number }}" class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                <tr data-driver-search="{{ $driver->name }} {{ $driver->phone }} {{ $driver->license_number }} {{ $driver->certificate_number }}@if($driver->blocked_at) بلۆککراوە@endif" class="border-b border-white/5 hover:bg-white/5 transition-colors {{ $driver->blocked_at ? 'blocked-row' : '' }}">
                     <td class="py-4 px-6">{{ $loop->iteration }}</td>
-                    <td class="py-4 px-6 font-medium text-lg">{{ $driver->name }}</td>
+                    <td class="py-4 px-6 font-medium text-lg">
+                        <div class="flex items-center gap-2">
+                            <span>{{ $driver->name }}</span>
+                            @if($driver->blocked_at)<span class="blocked-badge">شۆفێر بلۆککراوە</span>@endif
+                        </div>
+                    </td>
                     <td class="py-4 px-6">{{ $driver->phone }}</td>
                     <td class="py-4 px-6">{{ $driver->license_number }}</td>
                     <td class="py-4 px-6">
@@ -75,17 +80,32 @@
                             <span class="bg-rose-50 border border-rose-200 text-rose-700 px-3 py-1 rounded-full text-xs">نییەتی</span>
                         @endif
                     </td>
-                    <td class="py-4 px-6 space-x-2 space-x-reverse">
+                    <td class="min-w-[250px] py-4 px-6">
+                        <div class="flex flex-nowrap items-center gap-2 whitespace-nowrap">
                         @can('edit drivers')
-                        <button @click="editDriver = {{ $driver->toJson() }}; showEditModal = true" class="text-blue-400 hover:text-blue-300">دەستکاری</button>
-                        @endcan
-                        @can('delete drivers')
-                        <form action="{{ route('drivers.destroy', $driver) }}" method="POST" class="inline" onsubmit="return confirm('دڵنیای لە سڕینەوەی ئەم شۆفێرە؟')">
+                        <button type="button" @click="editDriver = {{ $driver->toJson() }}; showEditModal = true" class="inline-flex shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100">دەستکاری</button>
+                        @if($driver->blocked_at)
+                        <form action="{{ route('drivers.unblock', $driver) }}" method="POST" class="shrink-0" onsubmit="return confirm('دڵنیای لە لابردنی بلۆکی ئەم شۆفێرە؟')">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="text-red-400 hover:text-red-300">سڕینەوە</button>
+                            <button type="submit" class="inline-flex items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100">لابردنی بلۆک</button>
+                        </form>
+                        @else
+                        <form action="{{ route('drivers.block', $driver) }}" method="POST" class="shrink-0" onsubmit="return confirm('دڵنیای لە بلۆککردنی ئەم شۆفێرە؟')">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="inline-flex items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:border-amber-300 hover:bg-amber-100">بلۆککردن</button>
+                        </form>
+                        @endif
+                        @endcan
+                        @can('delete drivers')
+                        <form action="{{ route('drivers.destroy', $driver) }}" method="POST" class="shrink-0" onsubmit="return confirm('دڵنیای لە سڕینەوەی ئەم شۆفێرە؟')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="inline-flex items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100">سڕینەوە</button>
                         </form>
                         @endcan
+                        </div>
                     </td>
                 </tr>
                 @endforeach

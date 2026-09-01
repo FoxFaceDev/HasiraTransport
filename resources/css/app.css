@@ -239,6 +239,34 @@
         background-color: #ffcdd5 !important;
     }
 
+    .glass-panel table tbody tr.blocked-row > td {
+        background: repeating-linear-gradient(135deg, #ffe4e6 0, #ffe4e6 9px, #fff7f7 9px, #fff7f7 18px) !important;
+        border-top: 2px solid #be123c;
+        border-bottom: 2px solid #be123c;
+    }
+
+    .glass-panel table tbody tr.blocked-row > td:first-child {
+        border-right: 7px double #881337;
+    }
+
+    .glass-panel table tbody tr.blocked-row:hover > td {
+        background: repeating-linear-gradient(135deg, #fecdd3 0, #fecdd3 9px, #fff1f2 9px, #fff1f2 18px) !important;
+    }
+
+    .blocked-badge {
+        display: inline-flex;
+        flex-shrink: 0;
+        align-items: center;
+        border: 1px solid #9f1239;
+        border-radius: 9999px;
+        background-color: #881337;
+        padding: 0.2rem 0.55rem;
+        color: #fff;
+        font-size: 0.625rem;
+        font-weight: 800;
+        line-height: 1rem;
+    }
+
     .glass-panel .text-gray-400,
     .glass-card .text-gray-400 {
         color: #64748b !important;

@@ -1,13 +1,17 @@
 <div class="overflow-x-auto">
     <table class="w-full text-right border-collapse">
         <thead><tr class="border-b border-white/10 text-gray-400">
-            <th class="py-3 px-4 font-normal">زنجیرە</th><th class="py-3 px-4 font-normal">ژمارەی تەنکەر</th><th class="py-3 px-4 font-normal">ناوی شۆفێر</th><th class="py-3 px-4 font-normal">شەهادە</th><th class="py-3 px-4 font-normal">بەروار</th><th class="py-3 px-4 font-normal">کات</th><th class="py-3 px-4 font-normal">تێبینی</th><th class="py-3 px-4 font-normal">کردارەکان</th>
+            <th class="py-3 px-4 font-normal">زنجیرە</th><th class="py-3 px-4 font-normal">ژمارەی تەنکەر</th><th class="py-3 px-4 font-normal">خاوەنی خەت</th><th class="py-3 px-4 font-normal">مۆبایل</th><th class="py-3 px-4 font-normal">بەروار</th><th class="py-3 px-4 font-normal">کات</th><th class="py-3 px-4 font-normal">تێبینی</th><th class="py-3 px-4 font-normal">کردارەکان</th>
         </tr></thead>
         <tbody>
             <template x-for="tanker in visibleTankers" :key="tanker.id">
                 <tr class="border-b border-white/5 transition-colors" :class="getRowClass(tanker)">
-                    <td class="py-3 px-4" x-text="tanker.sequence_number || '-'"></td><td class="py-3 px-4 font-medium" x-text="tanker.plate_number || '-'"></td><td class="py-3 px-4" x-text="tanker.driver?.name || '-'"></td>
-                    <td class="py-3 px-4"><span x-show="tanker.driver?.has_certificate" class="rounded-full bg-emerald-100 px-3 py-1 text-xs text-emerald-700">هەیەتی</span><span x-show="!tanker.driver?.has_certificate" class="rounded-full bg-rose-100 px-3 py-1 text-xs text-rose-700">نییەتی</span></td>
+                    <td class="py-3 px-4" x-text="tanker.sequence_number || '-'"></td>
+                    <td class="py-3 px-4 font-medium">
+                        <div class="flex items-center gap-2"><span x-text="tanker.plate_number || '-'"></span><span x-cloak x-show="tanker.blocked_at" class="blocked-badge">خەت بلۆککراوە</span></div>
+                    </td>
+                    <td class="py-3 px-4" x-text="tanker.sequence_owner || '-'"></td>
+                    <td class="py-3 px-4" x-text="tanker.sequence_owner_phone || '-'"></td>
                     <td class="py-3 px-4" x-text="tanker.queue?.scheduled_date || '-'"></td><td class="py-3 px-4" x-text="tanker.queue?.scheduled_time || '-'"></td>
                     <td class="py-3 px-4">
                         @can('update queue notes')
@@ -18,11 +22,12 @@
                     </td>
                     <td class="py-3 px-4">
                         @can('update queue status')
-                        <div class="flex gap-2">
+                        <div x-cloak x-show="!isBlocked(tanker)" class="flex gap-2">
                             <button type="button" @click="openScheduleModal(tanker.id, 'green')" class="rounded-lg border px-3 py-1.5 text-sm transition-colors" :class="getStatus(tanker) === 'green' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'">هاتن</button>
                             <button type="button" @click="openScheduleModal(tanker.id, 'yellow')" class="rounded-lg border px-3 py-1.5 text-sm transition-colors" :class="getStatus(tanker) === 'yellow' ? 'bg-amber-500 border-amber-500 text-white' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'">دواخستن</button>
                             <button type="button" @click="updateStatus(tanker.id, 'red')" class="rounded-lg border px-3 py-1.5 text-sm transition-colors" :class="getStatus(tanker) === 'red' ? 'bg-rose-600 border-rose-600 text-white' : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'">نەهاتن</button>
                         </div>
+                        <span x-cloak x-show="isBlocked(tanker)" class="blocked-badge" x-text="getBlockReason(tanker)"></span>
                         @else<span class="text-slate-500">—</span>@endcan
                     </td>
                 </tr>

@@ -206,12 +206,21 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
                     tanker.plate_number,
                     tanker.sequence_number,
                     tanker.sequence_owner,
+                    tanker.sequence_owner_phone,
                     tanker.vin,
                     tanker.truck_color,
-                    tanker.driver?.name,
-                    tanker.driver?.phone,
+                    this.getBlockReason(tanker),
                 ].some(value => String(value || '').toLowerCase().includes(query));
             });
+        },
+
+        isBlocked(tanker) {
+            return Boolean(tanker?.blocked_at);
+        },
+
+        getBlockReason(tanker) {
+            if (tanker?.blocked_at) return 'خەت بلۆککراوە';
+            return '';
         },
 
         getStatus(tanker) {
@@ -219,6 +228,7 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
         },
 
         getRowClass(tanker) {
+            if (this.isBlocked(tanker)) return 'blocked-row';
             const status = this.getStatus(tanker);
             if (status === 'green') return 'queue-row-green';
             if (status === 'red') return 'queue-row-red';

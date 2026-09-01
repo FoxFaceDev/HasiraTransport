@@ -44,7 +44,7 @@ class QueueController extends Controller
         ]);
 
         $dataToUpdate = [
-            'driver_id' => $tanker->driver ? $tanker->driver->id : null,
+            'driver_id' => null,
             'status' => $request->status,
             'gatekeeper_id' => auth()->id(),
         ];
@@ -73,7 +73,7 @@ class QueueController extends Controller
         Queue::updateOrCreate(
             ['tanker_id' => $tanker->id],
             [
-                'driver_id' => $tanker->driver ? $tanker->driver->id : null,
+                'driver_id' => null,
                 'gatekeeper_id' => auth()->id(),
                 'note' => $request->note,
             ]
@@ -121,7 +121,7 @@ class QueueController extends Controller
                     continue;
                 }
 
-                $tanker = Tanker::with('driver')->findOrFail($operation['tanker_id']);
+                $tanker = Tanker::findOrFail($operation['tanker_id']);
 
                 if ($operation['type'] === 'status') {
                     abort_unless($request->user()->can('update queue status'), 403);
@@ -165,7 +165,7 @@ class QueueController extends Controller
                 // exactly the same records.
                 Queue::query()->lockForUpdate()->get();
 
-                $tankers = Tanker::with(['driver', 'latestQueue'])
+                $tankers = Tanker::with('latestQueue')
                     ->orderBy('sequence_number')
                     ->lockForUpdate()
                     ->get();
@@ -229,7 +229,7 @@ class QueueController extends Controller
     private function applyStatusOperation(Tanker $tanker, array $payload, int $gatekeeperId): void
     {
         $data = [
-            'driver_id' => $tanker->driver?->id,
+            'driver_id' => null,
             'status' => $payload['status'],
             'gatekeeper_id' => $gatekeeperId,
         ];
@@ -250,7 +250,7 @@ class QueueController extends Controller
         Queue::updateOrCreate(
             ['tanker_id' => $tanker->id],
             [
-                'driver_id' => $tanker->driver?->id,
+                'driver_id' => null,
                 'gatekeeper_id' => $gatekeeperId,
                 'note' => $payload['note'] ?? null,
             ]
@@ -259,25 +259,21 @@ class QueueController extends Controller
 
     private function snapshot(): array
     {
-        $tankers = Tanker::with(['driver', 'latestQueue'])
+        $tankers = Tanker::with('latestQueue')
             ->orderBy('sequence_number')
             ->get();
 
         return [
             'tankers' => $tankers->map(fn (Tanker $tanker) => [
                 'id' => $tanker->id,
+                'blocked_at' => $tanker->blocked_at?->toIso8601String(),
                 'sequence_number' => $tanker->sequence_number,
                 'sequence_owner' => $tanker->sequence_owner,
+                'sequence_owner_phone' => $tanker->sequence_owner_phone,
                 'plate_number' => $tanker->plate_number,
                 'vin' => $tanker->vin,
                 'truck_type' => $tanker->truck_type,
                 'truck_color' => $tanker->truck_color,
-                'driver' => $tanker->driver ? [
-                    'id' => $tanker->driver->id,
-                    'name' => $tanker->driver->name,
-                    'phone' => $tanker->driver->phone,
-                    'has_certificate' => (bool) $tanker->driver->has_certificate,
-                ] : null,
                 'queue' => $tanker->latestQueue ? [
                     'status' => $tanker->latestQueue->status,
                     'scheduled_date' => $tanker->latestQueue->scheduled_date,

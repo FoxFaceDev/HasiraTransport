@@ -15,10 +15,12 @@ class Driver extends Model
         'license_number',
         'has_certificate',
         'certificate_number',
+        'blocked_at',
     ];
 
     protected $casts = [
         'has_certificate' => 'boolean',
+        'blocked_at' => 'datetime',
     ];
 
     public function tankers()
