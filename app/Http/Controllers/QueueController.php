@@ -34,6 +34,17 @@ class QueueController extends Controller
         return view('gatekeeper.filter', compact('snapshot', 'status'));
     }
 
+    public function schedule(Request $request)
+    {
+        $validated = $request->validate([
+            'date' => 'nullable|date_format:Y-m-d',
+        ]);
+        $date = $validated['date'] ?? now('Asia/Baghdad')->toDateString();
+        $snapshot = $this->snapshot();
+
+        return view('gatekeeper.schedule', compact('snapshot', 'date'));
+    }
+
     public function updateStatus(Request $request, Tanker $tanker)
     {
         $request->validate([

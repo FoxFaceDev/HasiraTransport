@@ -135,12 +135,21 @@ function snapshotTimestamp(snapshot) {
     return Number.isNaN(value) ? 0 : value;
 }
 
+function localDateString() {
+    const now = new Date();
+    const offset = now.getTimezoneOffset() * 60000;
+
+    return new Date(now.getTime() - offset).toISOString().split('T')[0];
+}
+
 export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
     return {
         store: new GatekeeperStore(),
         tankers: (initialSnapshot.tankers || []).map(tanker => ({ ...tanker, queue: normalizedQueue(tanker.queue) })),
         search: '',
         statusFilter: options.statusFilter || null,
+        scheduleOnly: options.scheduleOnly || false,
+        selectedDate: options.dateFilter || localDateString(),
         online: navigator.onLine,
         syncing: false,
         ready: false,
@@ -152,7 +161,7 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
         showScheduleModal: false,
         schedulingTankerId: null,
         schedulingStatus: null,
-        scheduleDate: new Date().toISOString().split('T')[0],
+        scheduleDate: localDateString(),
         scheduleTime: '5:30 بەیانی',
         syncTimer: null,
 
@@ -200,6 +209,11 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
 
             return this.tankers.filter(tanker => {
                 if (this.statusFilter && this.getStatus(tanker) !== this.statusFilter) return false;
+                if (this.scheduleOnly) {
+                    const status = this.getStatus(tanker);
+                    if (!['green', 'yellow'].includes(status)) return false;
+                    if (tanker.queue?.scheduled_date !== this.selectedDate) return false;
+                }
                 if (!query) return true;
 
                 return [
@@ -227,6 +241,20 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
             return tanker?.queue?.status || 'pending';
         },
 
+        getStatusLabel(tanker) {
+            if (this.getStatus(tanker) === 'green') return 'هاتن';
+            if (this.getStatus(tanker) === 'yellow') return 'دواخستن';
+            return '';
+        },
+
+        changeScheduleDate(date) {
+            this.selectedDate = date || localDateString();
+
+            const url = new URL(window.location.href);
+            url.searchParams.set('date', this.selectedDate);
+            window.history.replaceState({}, '', url);
+        },
+
         getRowClass(tanker) {
             if (this.isBlocked(tanker)) return 'blocked-row';
             const status = this.getStatus(tanker);
@@ -236,10 +264,14 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
             return '';
         },
 
+        getScheduleRowClass(tanker) {
+            return this.getStatus(tanker) === 'green' ? 'queue-row-green' : 'queue-row-yellow';
+        },
+
         openScheduleModal(tankerId, status) {
             this.schedulingTankerId = tankerId;
             this.schedulingStatus = status;
-            this.scheduleDate = new Date().toISOString().split('T')[0];
+            this.scheduleDate = localDateString();
             this.scheduleTime = '5:30 بەیانی';
             this.showScheduleModal = true;
         },
@@ -262,6 +294,13 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
 
         async updateStatus(tankerId, status, extraData = {}) {
             await this.queueOperation('status', tankerId, { status, ...extraData });
+        },
+
+        async revertStatus(tankerId) {
+            await this.updateStatus(tankerId, 'pending', {
+                scheduled_date: null,
+                scheduled_time: null,
+            });
         },
 
         async updateNote(tankerId, note) {

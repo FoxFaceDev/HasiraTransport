@@ -57,6 +57,35 @@ it('embeds the initial truck snapshot in the gatekeeper page', function () {
         ->assertDontSee('x-text="index + 1"', false);
 });
 
+it('reverts a status by clicking its selected action again without showing another button', function () {
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.index'))
+        ->assertOk()
+        ->assertSee("getStatus(tanker) === 'green' ? revertStatus(tanker.id)", false)
+        ->assertSee("getStatus(tanker) === 'yellow' ? revertStatus(tanker.id)", false)
+        ->assertSee("getStatus(tanker) === 'red' ? revertStatus(tanker.id)", false)
+        ->assertDontSee('>گەڕاندنەوە</button>', false);
+});
+
+it('renders the dated schedule page and links it from the sidebar', function () {
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.schedule', ['date' => '2026-09-02']))
+        ->assertOk()
+        ->assertSee('لیستی ئەمڕۆ')
+        ->assertSee('type="date"', false)
+        ->assertSee('scheduleOnly: true', false)
+        ->assertSee("dateFilter: '2026-09-02'", false)
+        ->assertSee('getStatusLabel(tanker)', false)
+        ->assertSee('getScheduleRowClass(tanker)', false)
+        ->assertSee(route('gatekeeper.schedule'), false);
+});
+
+it('rejects an invalid schedule date', function () {
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.schedule', ['date' => 'not-a-date']))
+        ->assertSessionHasErrors('date');
+});
+
 it('renders realtime search on every status page', function (string $status) {
     $this->actingAs($this->gatekeeper)
         ->get(route('gatekeeper.filter', $status))
@@ -107,6 +136,41 @@ it('applies queued operations exactly once', function () {
     expect($queue->status)->toBe('yellow')
         ->and($queue->note)->toBe('Offline note')
         ->and(GatekeeperSyncOperation::count())->toBe(2);
+});
+
+it('reverts a gatekeeper status to pending and clears its schedule', function () {
+    Queue::create([
+        'tanker_id' => $this->tanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'green',
+        'scheduled_date' => '2026-08-18',
+        'scheduled_time' => '5:30 بەیانی',
+    ]);
+
+    $this->actingAs($this->gatekeeper)
+        ->postJson(route('gatekeeper.sync.push'), [
+            'operations' => [[
+                'operation_uuid' => (string) Str::uuid(),
+                'type' => 'status',
+                'tanker_id' => $this->tanker->id,
+                'payload' => [
+                    'status' => 'pending',
+                    'scheduled_date' => null,
+                    'scheduled_time' => null,
+                ],
+                'client_created_at' => now()->toIso8601String(),
+            ]],
+        ])
+        ->assertOk()
+        ->assertJsonPath('snapshot.tankers.0.queue.status', 'pending')
+        ->assertJsonPath('snapshot.tankers.0.queue.scheduled_date', null)
+        ->assertJsonPath('snapshot.tankers.0.queue.scheduled_time', null);
+
+    $queue = Queue::where('tanker_id', $this->tanker->id)->firstOrFail();
+
+    expect($queue->status)->toBe('pending')
+        ->and($queue->scheduled_date)->toBeNull()
+        ->and($queue->scheduled_time)->toBeNull();
 });
 
 it('rejects status synchronization without status permission', function () {

@@ -73,6 +73,7 @@ class AuditLog extends Model
 
             'blocks.index' => 'لیستی بلۆککراوەکانی بینی',
             'gatekeeper.index' => 'پەڕەی کۆنترۆڵی دەروازەی کردەوە',
+            'gatekeeper.schedule' => 'لیستی خەتە دیاریکراوەکانی ڕۆژی «'.data_get($this->request_data, 'date', now('Asia/Baghdad')->toDateString()).'»ی بینی',
             'gatekeeper.filter' => 'لیستی دۆخی «'.$this->statusName($this->subject_label).'»ی بینی',
             'gatekeeper.update-status' => 'دۆخی خەتێکی گۆڕی بۆ «'.$this->statusName(data_get($this->request_data, 'status')).'»'.$target,
             'gatekeeper.update-note' => 'تێبینی خەتێکی نوێ کردەوە'.$target,
