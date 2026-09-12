@@ -11,7 +11,7 @@
         body {
             color: #25344f;
             direction: rtl;
-            font-family: notokufiarabic, sans-serif;
+            font-family: notosansarabic, sans-serif;
             font-size: 10pt;
             line-height: 1.55;
         }
@@ -115,6 +115,11 @@
             color: #94a3b8;
         }
 
+        .status-green { color: #047857; font-weight: bold; }
+        .status-yellow { color: #b45309; font-weight: bold; }
+        .status-red { color: #be123c; font-weight: bold; }
+        .status-pending { color: #64748b; font-weight: bold; }
+
         .empty-state {
             color: #64748b;
             font-size: 12pt;
@@ -186,30 +191,34 @@
     <table class="data-table" dir="rtl">
         <thead>
             <tr>
-                <th width="10%">زنجیرە</th>
-                <th width="14%">ژمارەی تەنکەر</th>
-                <th width="17%">خاوەنی خەت</th>
-                <th width="13%">مۆبایل</th>
-                <th width="22%">تێبینی</th>
+                <th width="7%">زنجیرە</th>
+                <th width="12%">ژمارەی تەنکەر</th>
+                <th width="16%">خاوەنی خەت</th>
+                <th width="12%">مۆبایل</th>
+                <th width="10%">دۆخ</th>
+                <th width="20%">تێبینی</th>
                 <th width="13%">بەرواری دیاریکراو</th>
-                <th width="11%">کاتی دیاریکراو</th>
+                <th width="10%">کاتی دیاریکراو</th>
             </tr>
         </thead>
         <tbody>
             @forelse($tankers as $tanker)
             @php($queue = $tanker->latestQueue)
+            @php($status = $queue?->status ?? 'pending')
+            @php($statusLabels = ['pending' => 'چاوەڕوان', 'green' => 'هاتووە', 'yellow' => 'دواخراو', 'red' => 'نەهاتووە'])
             <tr>
                 <td class="center">{{ $tanker->sequence_number ?: '-' }}</td>
                 <td class="center">{{ $tanker->plate_number ?: '-' }}</td>
                 <td>{{ $tanker->sequence_owner ?: '-' }}</td>
                 <td class="center">{{ $tanker->sequence_owner_phone ?: '-' }}</td>
+                <td class="center status-{{ $status }}">{{ $statusLabels[$status] ?? $status }}</td>
                 <td class="{{ $queue?->note ? '' : 'muted' }}">{{ $queue?->note ?: '-' }}</td>
                 <td class="center {{ $queue?->scheduled_date ? '' : 'muted' }}">{{ $queue?->scheduled_date ? \Carbon\Carbon::parse($queue->scheduled_date)->format('Y-m-d') : '-' }}</td>
                 <td class="center {{ $queue?->scheduled_time ? '' : 'muted' }}">{{ $queue?->scheduled_time ?: '-' }}</td>
             </tr>
             @empty
             <tr>
-                <td colspan="7" class="empty-state">هیچ تەنکەرێک تۆمار نەکراوە.</td>
+                <td colspan="8" class="empty-state">هیچ تەنکەرێک تۆمار نەکراوە.</td>
             </tr>
             @endforelse
         </tbody>

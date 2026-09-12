@@ -7,6 +7,7 @@ use App\Models\Queue;
 use App\Models\QueueArchive;
 use App\Models\QueueArchiveItem;
 use App\Models\Tanker;
+use App\Support\XlsxWriter;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -46,6 +47,67 @@ class QueueController extends Controller
         $snapshot = $this->snapshot();
 
         return view('gatekeeper.schedule', compact('snapshot', 'date'));
+    }
+
+    public function export()
+    {
+        $statusLabels = [
+            'pending' => 'چاوەڕوان',
+            'green' => 'هاتووە',
+            'yellow' => 'دواخراو',
+            'red' => 'نەهاتووە',
+        ];
+        $tankers = Tanker::query()
+            ->with('latestQueue')
+            ->orderByRaw('CAST(sequence_number AS UNSIGNED)')
+            ->orderBy('sequence_number')
+            ->get();
+
+        $rows = [[
+            'ڕیزبەندی',
+            'ژمارەی تەنکەر',
+            'خاوەنی خەت',
+            'مۆبایل',
+            'VIN',
+            'جۆری بارھەڵگر',
+            'ڕەنگی بارھەڵگر',
+            'دۆخ',
+            'بەرواری دیاریکراو',
+            'کاتی دیاریکراو',
+            'تێبینی',
+            'بلۆککراوە',
+            'دوایین نوێکردنەوەی دۆخ',
+        ]];
+
+        foreach ($tankers as $tanker) {
+            $queue = $tanker->latestQueue;
+            $status = $queue?->status ?? 'pending';
+            $rows[] = [
+                $tanker->sequence_number,
+                $tanker->plate_number,
+                $tanker->sequence_owner,
+                $tanker->sequence_owner_phone,
+                $tanker->vin,
+                $tanker->truck_type,
+                $tanker->truck_color,
+                $statusLabels[$status] ?? $status,
+                $queue?->scheduled_date
+                    ? Carbon::parse($queue->scheduled_date)->format('Y-m-d')
+                    : null,
+                $queue?->scheduled_time,
+                $queue?->note,
+                $tanker->blocked_at ? 'بەڵێ' : 'نەخێر',
+                $queue?->updated_at?->timezone('Asia/Baghdad')->format('Y-m-d H:i:s'),
+            ];
+        }
+
+        $path = XlsxWriter::create('کۆنترۆڵی دەروازە', $rows, [11, 18, 24, 17, 24, 18, 16, 14, 18, 17, 30, 13, 23]);
+        $fileName = 'gatekeeper_'.now('Asia/Baghdad')->format('Y_m_d_H_i_s').'.xlsx';
+
+        return response()->download($path, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'private, no-store, max-age=0',
+        ])->deleteFileAfterSend(true);
     }
 
     public function history(Request $request)
@@ -292,7 +354,7 @@ class QueueController extends Controller
                     'title' => 'ڕاپۆرتی تەنکەرەکان',
                     'format' => 'A4-L',
                     'orientation' => 'L',
-                    'default_font' => 'notokufiarabic',
+                    'default_font' => 'notosansarabic',
                     'default_font_size' => 10,
                     'margin_left' => 10,
                     'margin_right' => 10,
@@ -300,13 +362,11 @@ class QueueController extends Controller
                     'margin_bottom' => 13,
                     'custom_font_dir' => public_path('fonts'),
                     'custom_font_data' => [
-                        'notokufiarabic' => [
-                            'R' => 'NotoKufiArabic-Regular.ttf',
-                            'B' => 'NotoKufiArabic-Bold.ttf',
-                            // This variable font's GPOS table uses a lookup format
-                            // unsupported by mPDF. Its Kurdish glyphs render correctly
-                            // through mPDF's built-in RTL shaping without OTL parsing.
-                            'useOTL' => 0,
+                        'notosansarabic' => [
+                            'R' => 'NotoSansArabic-Regular.ttf',
+                            'B' => 'NotoSansArabic-Bold.ttf',
+                            'useOTL' => 0xFF,
+                            'useKashida' => 75,
                         ],
                     ],
                     'autoScriptToLang' => true,

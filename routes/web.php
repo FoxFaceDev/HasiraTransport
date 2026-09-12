@@ -54,6 +54,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/gatekeeper', [QueueController::class, 'index'])->middleware('can:view gatekeeper')->name('gatekeeper.index');
     Route::get('/gatekeeper/schedule', [QueueController::class, 'schedule'])->middleware('can:view gatekeeper')->name('gatekeeper.schedule');
     Route::get('/gatekeeper/history', [QueueController::class, 'history'])->middleware('can:view gatekeeper')->name('gatekeeper.history');
+    Route::get('/gatekeeper/export', [QueueController::class, 'export'])->middleware('can:view gatekeeper')->name('gatekeeper.export');
     Route::get('/gatekeeper/filter/{status}', [QueueController::class, 'filter'])->middleware('can:view gatekeeper')->name('gatekeeper.filter');
     Route::post('/gatekeeper/queue/{tanker}', [QueueController::class, 'updateStatus'])->middleware('can:update queue status')->name('gatekeeper.update-status');
     Route::post('/gatekeeper/queue/{tanker}/note', [QueueController::class, 'updateNote'])->middleware('can:update queue notes')->name('gatekeeper.update-note');

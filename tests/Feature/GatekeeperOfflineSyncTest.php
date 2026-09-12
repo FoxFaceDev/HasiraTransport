@@ -42,6 +42,39 @@ it('returns the complete gatekeeper snapshot', function () {
         ->assertJsonPath('tankers.0.queue.status', 'pending');
 });
 
+it('exports the complete gatekeeper table as a right-to-left Excel workbook', function () {
+    Queue::create([
+        'tanker_id' => $this->tanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'yellow',
+        'scheduled_date' => '2026-09-15',
+        'scheduled_time' => '10:30',
+        'note' => 'تێبینی تاقیکردنەوە',
+    ]);
+
+    $response = $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.export'))
+        ->assertOk()
+        ->assertDownload();
+
+    $path = $response->baseResponse->getFile()->getPathname();
+    $zip = new ZipArchive;
+
+    expect($zip->open($path))->toBeTrue();
+
+    $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+    $workbook = $zip->getFromName('xl/workbook.xml');
+    $zip->close();
+
+    expect($sheet)
+        ->toContain('rightToLeft="1"')
+        ->toContain('TEST-100')
+        ->toContain('VIN-OFFLINE-1')
+        ->toContain('دواخراو')
+        ->toContain('تێبینی تاقیکردنەوە')
+        ->and($workbook)->toContain('کۆنترۆڵی دەروازە');
+});
+
 it('embeds the initial truck snapshot in the gatekeeper page', function () {
     $this->actingAs($this->gatekeeper)
         ->get(route('gatekeeper.index'))
