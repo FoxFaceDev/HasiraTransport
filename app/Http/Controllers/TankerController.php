@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Setting;
 use App\Models\Tanker;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class TankerController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Tanker::query()->orderBy('id');
+        $query = Tanker::query()->with('ownershipTransfers.recorder')->orderBy('id');
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -75,7 +77,7 @@ class TankerController extends Controller
             'truck_color' => 'nullable|string|max:255',
         ]);
 
-        $tanker->update([
+        $newValues = [
             'sequence_number' => $request->sequence_number,
             'sequence_owner' => $request->sequence_owner,
             'sequence_owner_phone' => $request->sequence_owner_phone,
@@ -83,9 +85,51 @@ class TankerController extends Controller
             'vin' => $request->vin,
             'truck_type' => $request->truck_type,
             'truck_color' => $request->truck_color,
-        ]);
+        ];
+
+        DB::transaction(function () use ($tanker, $newValues) {
+            $lockedTanker = Tanker::query()->lockForUpdate()->findOrFail($tanker->id);
+            $trackedFields = ['sequence_owner', 'sequence_owner_phone', 'plate_number', 'vin', 'truck_type', 'truck_color'];
+
+            if (collect($trackedFields)->contains(fn (string $field) => $lockedTanker->{$field} !== $newValues[$field])) {
+                $this->recordTransfer($lockedTanker, $newValues, 'correction', now()->toDateString(), null);
+            }
+
+            $lockedTanker->update($newValues);
+        }, 3);
 
         return back()->with('success', 'زانیارییەکانی بارهەڵگر نوێکرایەوە.');
+    }
+
+    public function sell(Request $request, Tanker $tanker)
+    {
+        $validated = $request->validate([
+            'new_owner' => ['required', 'string', 'max:255'],
+            'new_owner_phone' => ['nullable', 'string', 'max:255'],
+            'new_plate_number' => ['required', 'string', 'max:255', Rule::unique('tankers', 'plate_number')->ignore($tanker->id)],
+            'new_vin' => ['nullable', 'string', 'max:255'],
+            'new_truck_type' => ['required', 'string', 'max:255'],
+            'new_truck_color' => ['nullable', 'string', 'max:255'],
+            'transferred_at' => ['required', 'date'],
+            'note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        DB::transaction(function () use ($tanker, $validated) {
+            $lockedTanker = Tanker::query()->lockForUpdate()->findOrFail($tanker->id);
+            $newValues = [
+                'sequence_owner' => $validated['new_owner'],
+                'sequence_owner_phone' => $validated['new_owner_phone'] ?? null,
+                'plate_number' => $validated['new_plate_number'],
+                'vin' => $validated['new_vin'] ?? null,
+                'truck_type' => $validated['new_truck_type'],
+                'truck_color' => $validated['new_truck_color'] ?? null,
+            ];
+
+            $this->recordTransfer($lockedTanker, $newValues, 'sale', $validated['transferred_at'], $validated['note'] ?? null);
+            $lockedTanker->update($newValues);
+        }, 3);
+
+        return back()->with('success', 'فرۆشتنی خەتەکە تۆمار کرا و خاوەنەکەی گۆڕدرا.');
     }
 
     public function destroy(Tanker $tanker)
@@ -121,5 +165,27 @@ class TankerController extends Controller
         );
 
         return back()->with('success', 'Limit updated.');
+    }
+
+    private function recordTransfer(Tanker $tanker, array $newValues, string $changeType, string $transferredAt, ?string $note): void
+    {
+        $tanker->ownershipTransfers()->create([
+            'recorded_by' => auth()->id(),
+            'change_type' => $changeType,
+            'transferred_at' => $transferredAt,
+            'previous_owner' => $tanker->sequence_owner,
+            'previous_owner_phone' => $tanker->sequence_owner_phone,
+            'previous_plate_number' => $tanker->plate_number,
+            'previous_vin' => $tanker->vin,
+            'previous_truck_type' => $tanker->truck_type,
+            'previous_truck_color' => $tanker->truck_color,
+            'new_owner' => $newValues['sequence_owner'],
+            'new_owner_phone' => $newValues['sequence_owner_phone'],
+            'new_plate_number' => $newValues['plate_number'],
+            'new_vin' => $newValues['vin'],
+            'new_truck_type' => $newValues['truck_type'],
+            'new_truck_color' => $newValues['truck_color'],
+            'note' => $note,
+        ]);
     }
 }

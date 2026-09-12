@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Queue;
-use App\Models\Tanker;
 use App\Models\GatekeeperSyncOperation;
+use App\Models\Queue;
+use App\Models\QueueArchive;
+use App\Models\QueueArchiveItem;
+use App\Models\Tanker;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -43,6 +46,79 @@ class QueueController extends Controller
         $snapshot = $this->snapshot();
 
         return view('gatekeeper.schedule', compact('snapshot', 'date'));
+    }
+
+    public function history(Request $request)
+    {
+        $validated = $request->validate([
+            'month' => ['nullable', 'date_format:Y-m'],
+            'status' => ['nullable', 'in:pending,green,yellow,red'],
+            'search' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $month = $validated['month'] ?? now('Asia/Baghdad')->format('Y-m');
+        $selectedMonth = Carbon::createFromFormat('Y-m', $month, 'Asia/Baghdad')->startOfMonth();
+        $fromUtc = $selectedMonth->copy()->startOfMonth()->utc();
+        $toUtc = $selectedMonth->copy()->endOfMonth()->utc();
+
+        $currentTankersQuery = Tanker::query()
+            ->with('latestQueue')
+            ->when($validated['status'] ?? null, function ($query, $status) {
+                if ($status === 'pending') {
+                    $query->where(function ($query) {
+                        $query->whereDoesntHave('latestQueue')
+                            ->orWhereHas('latestQueue', fn ($queue) => $queue->where('status', 'pending'));
+                    });
+
+                    return;
+                }
+
+                $query->whereHas('latestQueue', fn ($queue) => $queue->where('status', $status));
+            })
+            ->when($validated['search'] ?? null, function ($query, $search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('sequence_number', 'like', "%{$search}%")
+                        ->orWhere('sequence_owner', 'like', "%{$search}%")
+                        ->orWhere('sequence_owner_phone', 'like', "%{$search}%")
+                        ->orWhere('plate_number', 'like', "%{$search}%")
+                        ->orWhere('vin', 'like', "%{$search}%");
+                });
+            })
+            ->orderByRaw('CAST(sequence_number AS UNSIGNED)')
+            ->orderBy('sequence_number');
+
+        $currentTankers = $month === now('Asia/Baghdad')->format('Y-m')
+            ? $currentTankersQuery->get()
+            : collect();
+
+        $items = QueueArchiveItem::query()
+            ->with('archive.resetter')
+            ->whereHas('archive', fn ($query) => $query->whereBetween('reset_at', [
+                $fromUtc,
+                $toUtc,
+            ]))
+            ->when($validated['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->when($validated['search'] ?? null, function ($query, $search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('sequence_number', 'like', "%{$search}%")
+                        ->orWhere('sequence_owner', 'like', "%{$search}%")
+                        ->orWhere('sequence_owner_phone', 'like', "%{$search}%")
+                        ->orWhere('plate_number', 'like', "%{$search}%")
+                        ->orWhere('vin', 'like', "%{$search}%");
+                });
+            })
+            ->orderByDesc(
+                QueueArchive::query()
+                    ->select('reset_at')
+                    ->whereColumn('queue_archives.id', 'queue_archive_items.queue_archive_id')
+                    ->limit(1)
+            )
+            ->orderByRaw('CAST(sequence_number AS UNSIGNED)')
+            ->orderBy('sequence_number')
+            ->paginate(100)
+            ->withQueryString();
+
+        return view('gatekeeper.history', compact('items', 'currentTankers', 'month'));
     }
 
     public function updateStatus(Request $request, Tanker $tanker)
@@ -129,6 +205,7 @@ class QueueController extends Controller
 
                 if ($alreadyProcessed) {
                     $accepted[] = $operation['operation_uuid'];
+
                     continue;
                 }
 
@@ -180,6 +257,32 @@ class QueueController extends Controller
                     ->orderBy('sequence_number')
                     ->lockForUpdate()
                     ->get();
+
+                $archive = QueueArchive::create([
+                    'reset_by' => auth()->id(),
+                    'reset_at' => $generatedAt,
+                    'report_file' => $filePath,
+                ]);
+
+                $archive->items()->createMany($tankers->map(function (Tanker $tanker) {
+                    $queue = $tanker->latestQueue;
+
+                    return [
+                        'tanker_id' => $tanker->id,
+                        'sequence_number' => $tanker->sequence_number,
+                        'sequence_owner' => $tanker->sequence_owner,
+                        'sequence_owner_phone' => $tanker->sequence_owner_phone,
+                        'plate_number' => $tanker->plate_number,
+                        'vin' => $tanker->vin,
+                        'truck_type' => $tanker->truck_type,
+                        'truck_color' => $tanker->truck_color,
+                        'status' => $queue?->status ?? 'pending',
+                        'scheduled_date' => $queue?->scheduled_date,
+                        'scheduled_time' => $queue?->scheduled_time,
+                        'note' => $queue?->note,
+                        'status_updated_at' => $queue?->updated_at,
+                    ];
+                })->all());
 
                 $pdf = Pdf::loadView('pdf.queue_report', [
                     'tankers' => $tankers,

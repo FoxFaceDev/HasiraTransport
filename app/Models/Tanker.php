@@ -29,4 +29,9 @@ class Tanker extends Model
     {
         return $this->hasOne(Queue::class)->latestOfMany();
     }
+
+    public function ownershipTransfers()
+    {
+        return $this->hasMany(TankerTransfer::class)->orderByDesc('id');
+    }
 }

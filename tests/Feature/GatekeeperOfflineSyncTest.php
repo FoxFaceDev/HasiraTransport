@@ -2,10 +2,13 @@
 
 use App\Models\GatekeeperSyncOperation;
 use App\Models\Queue;
+use App\Models\QueueArchive;
+use App\Models\QueueArchiveItem;
 use App\Models\Tanker;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
@@ -191,4 +194,91 @@ it('rejects status synchronization without status permission', function () {
 
     expect(Queue::count())->toBe(0)
         ->and(GatekeeperSyncOperation::count())->toBe(0);
+});
+
+it('archives every truck status during reset and filters the history by month', function () {
+    Queue::create([
+        'tanker_id' => $this->tanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'yellow',
+        'scheduled_date' => '2026-09-15',
+        'scheduled_time' => '10:30',
+        'note' => 'Delayed',
+    ]);
+    $pendingTanker = Tanker::create([
+        'sequence_number' => '13',
+        'sequence_owner' => 'Pending Owner',
+        'plate_number' => 'TEST-101',
+        'truck_type' => 'Tanker',
+    ]);
+    Storage::fake('public');
+    $this->travelTo(now()->setDate(2026, 9, 12)->setTime(9, 0));
+
+    $this->actingAs($this->gatekeeper)
+        ->post(route('gatekeeper.reset'))
+        ->assertOk()
+        ->assertHeader('content-type', 'application/pdf');
+
+    expect(Queue::query()->count())->toBe(0)
+        ->and(QueueArchive::query()->count())->toBe(1)
+        ->and(QueueArchiveItem::query()->count())->toBe(2)
+        ->and(QueueArchiveItem::query()->where('tanker_id', $this->tanker->id)->value('status'))->toBe('yellow')
+        ->and(QueueArchiveItem::query()->where('tanker_id', $pendingTanker->id)->value('status'))->toBe('pending');
+
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.history', ['month' => '2026-09', 'status' => 'yellow']))
+        ->assertOk()
+        ->assertSee('TEST-100')
+        ->assertSee('Delayed')
+        ->assertDontSee('TEST-101');
+});
+
+it('includes the current not-yet-reset trucks in status history', function () {
+    Queue::create([
+        'tanker_id' => $this->tanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'green',
+        'note' => 'Current live status',
+    ]);
+
+    expect(QueueArchive::query()->count())->toBe(0);
+
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.history', ['month' => now('Asia/Baghdad')->format('Y-m'), 'status' => 'green']))
+        ->assertOk()
+        ->assertSee('لیستی ئێستا — هێشتا سفر نەکراوەتەوە')
+        ->assertSee('TEST-100')
+        ->assertSee('Current live status');
+
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.history', ['month' => '2025-01', 'status' => 'green']))
+        ->assertOk()
+        ->assertDontSee('TEST-100')
+        ->assertDontSee('لیستی ئێستا — هێشتا سفر نەکراوەتەوە');
+});
+
+it('orders the monthly report numerically by ranking', function () {
+    foreach ([10, 2] as $ranking) {
+        $tanker = Tanker::create([
+            'sequence_number' => (string) $ranking,
+            'sequence_owner' => 'Owner '.$ranking,
+            'plate_number' => 'RANK-'.$ranking,
+            'truck_type' => 'Tanker',
+        ]);
+        Queue::create([
+            'tanker_id' => $tanker->id,
+            'gatekeeper_id' => $this->gatekeeper->id,
+            'status' => 'green',
+        ]);
+    }
+    Queue::create([
+        'tanker_id' => $this->tanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'green',
+    ]);
+
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.history', ['month' => now('Asia/Baghdad')->format('Y-m'), 'status' => 'green']))
+        ->assertOk()
+        ->assertSeeInOrder(['RANK-2', 'RANK-10', 'TEST-100']);
 });

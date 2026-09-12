@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlockController;
 use App\Http\Controllers\DriverController;
 use App\Http\Controllers\ProfileController;
@@ -43,6 +43,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/tankers', [TankerController::class, 'index'])->middleware('can:view tankers')->name('tankers.index');
     Route::post('/tankers', [TankerController::class, 'store'])->middleware('can:create tankers')->name('tankers.store');
     Route::put('/tankers/{tanker}', [TankerController::class, 'update'])->middleware('can:edit tankers')->name('tankers.update');
+    Route::post('/tankers/{tanker}/sell', [TankerController::class, 'sell'])->middleware('can:edit tankers')->name('tankers.sell');
     Route::delete('/tankers/{tanker}', [TankerController::class, 'destroy'])->middleware('can:delete tankers')->name('tankers.destroy');
     Route::patch('/tankers/{tanker}/block', [TankerController::class, 'block'])->middleware('can:edit tankers')->name('tankers.block');
     Route::delete('/tankers/{tanker}/block', [TankerController::class, 'unblock'])->middleware('can:edit tankers')->name('tankers.unblock');
@@ -52,6 +53,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/gatekeeper', [QueueController::class, 'index'])->middleware('can:view gatekeeper')->name('gatekeeper.index');
     Route::get('/gatekeeper/schedule', [QueueController::class, 'schedule'])->middleware('can:view gatekeeper')->name('gatekeeper.schedule');
+    Route::get('/gatekeeper/history', [QueueController::class, 'history'])->middleware('can:view gatekeeper')->name('gatekeeper.history');
     Route::get('/gatekeeper/filter/{status}', [QueueController::class, 'filter'])->middleware('can:view gatekeeper')->name('gatekeeper.filter');
     Route::post('/gatekeeper/queue/{tanker}', [QueueController::class, 'updateStatus'])->middleware('can:update queue status')->name('gatekeeper.update-status');
     Route::post('/gatekeeper/queue/{tanker}/note', [QueueController::class, 'updateNote'])->middleware('can:update queue notes')->name('gatekeeper.update-note');

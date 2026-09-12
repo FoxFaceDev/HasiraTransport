@@ -19,6 +19,8 @@
 /storage/*.key
 /storage/pail
 /vendor
+/output/cpanel-*/
+/output/hasiratransport-cpanel*.zip
 Homestead.json
 Homestead.yaml
 Thumbs.db

@@ -56,6 +56,58 @@
         border: 1px solid #cbd6e4;
         border-radius: 1.5rem;
         box-shadow: 0 18px 50px rgba(30, 55, 90, 0.13);
+        transition: width 220ms ease;
+    }
+
+    .sidebar-toggle {
+        align-items: center;
+        background: #edf4ff;
+        border: 1px solid #c9dcf8;
+        border-radius: 0.65rem;
+        color: #2563eb;
+        display: inline-flex;
+        flex-shrink: 0;
+        height: 2rem;
+        justify-content: center;
+        margin-right: auto;
+        transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+        width: 2rem;
+    }
+
+    .sidebar-toggle:hover {
+        background: #dce9fb;
+        color: #1d4ed8;
+        transform: scale(1.05);
+    }
+
+    .app-sidebar.is-collapsed .sidebar-header {
+        flex-direction: column;
+        gap: 0.65rem;
+        padding: 0.8rem 0.5rem;
+    }
+
+    .app-sidebar.is-collapsed .sidebar-toggle {
+        margin-right: 0;
+    }
+
+    .app-sidebar.is-collapsed .sidebar-section-title,
+    .app-sidebar.is-collapsed .nav-link > span:last-child {
+        display: none;
+    }
+
+    .app-sidebar.is-collapsed .nav-link {
+        justify-content: center;
+        padding-left: 0.6rem;
+        padding-right: 0.6rem;
+    }
+
+    .app-sidebar.is-collapsed .nav-link > svg,
+    .app-sidebar.is-collapsed .nav-link > span:not(:last-child) {
+        margin-left: 0;
+    }
+
+    .app-sidebar .nav-link > svg {
+        flex-shrink: 0;
     }
 
     .brand-mark {
@@ -194,6 +246,100 @@
 
     .glass-panel table tbody tr:hover > td {
         background-color: #e8eef6;
+    }
+
+    .table-scroll-viewport {
+        max-height: calc(100vh - 14rem);
+        overflow: auto;
+        overscroll-behavior: contain;
+        scrollbar-color: #94a3b8 #e2e8f0;
+        scrollbar-width: thin;
+    }
+
+    .table-scroll-viewport > table {
+        min-width: 100%;
+        width: max-content;
+    }
+
+    .table-scroll-viewport > table > thead > tr > th {
+        background: #e7edf5;
+        box-shadow: inset 0 -1px 0 #c5d0dd;
+        position: sticky;
+        top: 0;
+        z-index: 15;
+    }
+
+    .table-scroll-viewport .table-col-rank {
+        max-width: 4.5rem;
+        min-width: 4.5rem;
+        padding-left: 0.65rem !important;
+        padding-right: 0.65rem !important;
+        white-space: nowrap;
+        width: 4.5rem;
+    }
+
+    .table-scroll-viewport .table-col-plate {
+        max-width: 10rem;
+        min-width: 9rem;
+        padding-left: 0.7rem !important;
+        padding-right: 0.7rem !important;
+        white-space: nowrap;
+        width: 9rem;
+    }
+
+    .table-scroll-viewport .table-col-plate > div {
+        flex-wrap: wrap;
+    }
+
+    .table-scroll-viewport .table-col-owner {
+        max-width: 11rem;
+        min-width: 11rem;
+        overflow-wrap: anywhere;
+        padding-left: 0.7rem !important;
+        padding-right: 0.7rem !important;
+        width: 11rem;
+    }
+
+    .table-scroll-viewport .table-col-phone {
+        max-width: 9.5rem;
+        min-width: 9.5rem;
+        padding-left: 0.7rem !important;
+        padding-right: 0.7rem !important;
+        white-space: nowrap;
+        width: 9.5rem;
+    }
+
+    .table-scroll-viewport .table-col-date,
+    .table-scroll-viewport .table-col-time {
+        min-width: 9rem;
+        white-space: nowrap;
+        width: 9rem;
+    }
+
+    .table-scroll-viewport .table-col-datetime {
+        min-width: 11rem;
+        white-space: nowrap;
+        width: 11rem;
+    }
+
+    .table-scroll-viewport::-webkit-scrollbar {
+        height: 11px;
+        width: 11px;
+    }
+
+    .table-scroll-viewport::-webkit-scrollbar-track {
+        background: #e2e8f0;
+        border-radius: 999px;
+    }
+
+    .table-scroll-viewport::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+        border: 2px solid #e2e8f0;
+        border-radius: 999px;
+    }
+
+    .table-scroll-viewport::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
     }
 
     /* Cell backgrounds render consistently across tables, unlike gradients on rows. */
@@ -477,6 +623,10 @@
             height: auto !important;
             margin: 0.75rem !important;
             width: calc(100% - 1.5rem) !important;
+        }
+
+        .sidebar-toggle {
+            display: none;
         }
 
         .app-sidebar nav {
