@@ -4,15 +4,44 @@
 <div
     x-data="{
         showAddModal: false,
+        showActionsModal: false,
         showEditModal: false,
         showSaleModal: false,
         showHistoryModal: false,
+        actionsTanker: null,
         editTanker: null,
         saleTanker: null,
         historyTanker: null,
         saleData: {},
         tankerSearch: @js(request('search', '')),
         hasSearchResults: true,
+        openOperation(tanker, type = 'sale_with_truck') {
+            this.saleTanker = tanker;
+            this.saleData = {
+                operation_type: type,
+                document_number: '',
+                new_owner: '',
+                new_owner_phone: '',
+                new_plate_number: '',
+                new_vin: '',
+                new_truck_type: '',
+                new_truck_model: '',
+                new_truck_color: '',
+                transferred_at: '{{ now('Asia/Baghdad')->toDateString() }}',
+                seller_national_id: '',
+                seller_security_code: '',
+                seller_agent: '',
+                seller_agency_number: '',
+                seller_document_date: '',
+                buyer_national_id: '',
+                buyer_security_code: '',
+                buyer_agent: '',
+                buyer_agency_number: '',
+                buyer_document_date: '',
+                note: '',
+            };
+            this.showSaleModal = true;
+        },
         filterTankers() {
             const query = this.tankerSearch.trim().toLocaleLowerCase();
             let visibleRows = 0;
@@ -98,6 +127,10 @@
                     <input type="text" name="truck_type" class="glass-input w-full px-4 py-2 rounded-lg" required>
                 </div>
                 <div>
+                    <label class="block text-sm text-gray-400 mb-1">مۆدێلی بارهەڵگر</label>
+                    <input type="text" name="truck_model" class="glass-input w-full px-4 py-2 rounded-lg">
+                </div>
+                <div>
                     <label class="block text-sm text-gray-400 mb-1">VIN</label>
                     <input type="text" name="vin" class="glass-input w-full px-4 py-2 rounded-lg">
                 </div>
@@ -125,6 +158,7 @@
                     <th class="py-4 px-6 font-normal">ژمارەی تابلۆ</th>
                     <th class="py-4 px-6 font-normal">VIN</th>
                     <th class="py-4 px-6 font-normal">جۆری بارهەڵگر</th>
+                    <th class="py-4 px-6 font-normal">مۆدێلی بارهەڵگر</th>
                     <th class="py-4 px-6 font-normal">ڕەنگی بارهەڵگر</th>
                     <th class="py-4 px-6 font-normal">کردارەکان</th>
                 </tr>
@@ -132,7 +166,7 @@
             <tbody x-ref="tankerRows">
                 @foreach($tankers as $tanker)
                 @php($isBlocked = $tanker->blocked_at)
-                <tr data-tanker-search="{{ $tanker->sequence_number }} {{ $tanker->sequence_owner }} {{ $tanker->sequence_owner_phone }} {{ $tanker->plate_number }} {{ $tanker->vin }} {{ $tanker->truck_type }} {{ $tanker->truck_color }}@if($isBlocked) بلۆککراوە@endif" class="border-b border-white/5 hover:bg-white/5 transition-colors {{ $isBlocked ? 'blocked-row' : '' }}">
+                <tr data-tanker-search="{{ $tanker->sequence_number }} {{ $tanker->sequence_owner }} {{ $tanker->sequence_owner_phone }} {{ $tanker->plate_number }} {{ $tanker->vin }} {{ $tanker->truck_type }} {{ $tanker->truck_model }} {{ $tanker->truck_color }}@if($isBlocked) بلۆککراوە@endif" class="border-b border-white/5 hover:bg-white/5 transition-colors {{ $isBlocked ? 'blocked-row' : '' }}">
                     <td class="py-4 px-6">{{ $tanker->sequence_number }}</td>
                     <td class="py-4 px-6">{{ $tanker->sequence_owner ?: '-' }}</td>
                     <td class="py-4 px-6">{{ $tanker->sequence_owner_phone ?: '-' }}</td>
@@ -144,49 +178,66 @@
                     </td>
                     <td class="py-4 px-6">{{ $tanker->vin ?: '-' }}</td>
                     <td class="py-4 px-6">{{ $tanker->truck_type }}</td>
+                    <td class="py-4 px-6">{{ $tanker->truck_model ?: '-' }}</td>
                     <td class="py-4 px-6">{{ $tanker->truck_color ?: '-' }}</td>
-                    <td class="min-w-[250px] py-4 px-6">
-                        <div class="flex flex-nowrap items-center gap-2 whitespace-nowrap">
-                        @can('edit tankers')
-                        <button type="button" @click="editTanker = {{ $tanker->toJson() }}; showEditModal = true" class="inline-flex shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100">دەستکاری</button>
-                        <button type="button" @click="saleTanker = {{ $tanker->toJson() }}; saleData = { new_owner: '', new_owner_phone: '', new_plate_number: saleTanker.plate_number, new_vin: saleTanker.vin, new_truck_type: saleTanker.truck_type, new_truck_color: saleTanker.truck_color, transferred_at: '{{ now('Asia/Baghdad')->toDateString() }}', note: '' }; showSaleModal = true" class="inline-flex shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100">فرۆشتن</button>
-                        @if($tanker->blocked_at)
-                        <form action="{{ route('tankers.unblock', $tanker) }}" method="POST" class="shrink-0" onsubmit="return confirm('دڵنیای لە لابردنی بلۆکی ئەم خەتە؟')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="inline-flex items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100">لابردنی بلۆک</button>
-                        </form>
-                        @else
-                        <form action="{{ route('tankers.block', $tanker) }}" method="POST" class="shrink-0" onsubmit="return confirm('دڵنیای لە بلۆککردنی ئەم خەتە؟')">
-                            @csrf
-                            @method('PATCH')
-                            <button type="submit" class="inline-flex items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:border-amber-300 hover:bg-amber-100">بلۆککردن</button>
-                        </form>
-                        @endif
-                        @endcan
-                        <button type="button" @click="historyTanker = {{ $tanker->toJson() }}; showHistoryModal = true" class="inline-flex shrink-0 items-center justify-center rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-700 transition hover:bg-violet-100">مێژوو</button>
-                        @can('delete tankers')
-                        <form action="{{ route('tankers.destroy', $tanker) }}" method="POST" class="shrink-0" onsubmit="return confirm('دڵنیای لە سڕینەوەی ئەم بارهەڵگرە؟')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="inline-flex items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100">سڕینەوە</button>
-                        </form>
-                        @endcan
-                        </div>
+                    <td class="min-w-[120px] py-4 px-6">
+                        <button type="button" @click="actionsTanker = {{ $tanker->toJson() }}; showActionsModal = true" class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700">کردارەکان</button>
                     </td>
                 </tr>
                 @endforeach
                 @if($tankers->isEmpty())
                 <tr>
-                    <td colspan="8" class="py-8 text-center text-gray-400">هیچ بارهەڵگرێک نەدۆزرایەوە.</td>
+                    <td colspan="9" class="py-8 text-center text-gray-400">هیچ بارهەڵگرێک نەدۆزرایەوە.</td>
                 </tr>
                 @else
                 <tr x-cloak x-show="!hasSearchResults">
-                    <td colspan="8" class="py-8 text-center text-gray-400">هیچ بارهەڵگرێک نەدۆزرایەوە.</td>
+                    <td colspan="9" class="py-8 text-center text-gray-400">هیچ بارهەڵگرێک نەدۆزرایەوە.</td>
                 </tr>
                 @endif
             </tbody>
         </table>
+    </div>
+
+    <!-- Actions Modal -->
+    <div x-show="showActionsModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" style="display: none;">
+        <div @click.away="showActionsModal = false" class="glass-card w-full max-w-md p-6">
+            <div class="mb-6 flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-bold">کردارەکان</h3>
+                    <p class="mt-1 text-sm text-slate-500"><span x-text="actionsTanker?.sequence_number || '-'"></span> — <span x-text="actionsTanker?.plate_number || '-'"></span></p>
+                </div>
+                <button type="button" @click="showActionsModal = false" class="text-2xl text-slate-400 hover:text-slate-900">&times;</button>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                @can('edit tankers')
+                <button type="button" @click="editTanker = actionsTanker; showActionsModal = false; showEditModal = true" class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 transition hover:bg-blue-100">دەستکاری</button>
+                <button type="button" @click="showActionsModal = false; openOperation(actionsTanker, 'sale_with_truck')" class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 transition hover:bg-emerald-100">فرۆشتن</button>
+                <button type="button" @click="showActionsModal = false; openOperation(actionsTanker, 'truck_change')" class="rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-bold text-cyan-700 transition hover:bg-cyan-100">گۆڕینی بارهەڵگر</button>
+
+                <form x-show="actionsTanker?.blocked_at" :action="actionsTanker ? '{{ url('/tankers') }}/' + actionsTanker.id + '/block' : ''" method="POST" onsubmit="return confirm('دڵنیای لە لابردنی بلۆکی ئەم خەتە؟')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="w-full rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 transition hover:bg-emerald-100">لابردنی بلۆک</button>
+                </form>
+                <form x-show="actionsTanker && !actionsTanker.blocked_at" :action="actionsTanker ? '{{ url('/tankers') }}/' + actionsTanker.id + '/block' : ''" method="POST" onsubmit="return confirm('دڵنیای لە بلۆککردنی ئەم خەتە؟')">
+                    @csrf
+                    @method('PATCH')
+                    <button type="submit" class="w-full rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700 transition hover:bg-amber-100">بلۆککردن</button>
+                </form>
+                @endcan
+
+                <button type="button" @click="historyTanker = actionsTanker; showActionsModal = false; showHistoryModal = true" class="rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-bold text-violet-700 transition hover:bg-violet-100">مێژوو</button>
+
+                @can('delete tankers')
+                <form :action="actionsTanker ? '{{ url('/tankers') }}/' + actionsTanker.id : ''" method="POST" onsubmit="return confirm('دڵنیای لە سڕینەوەی ئەم بارهەڵگرە؟')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="w-full rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700 transition hover:bg-rose-100">سڕینەوە</button>
+                </form>
+                @endcan
+            </div>
+        </div>
     </div>
 
     <!-- Edit Modal -->
@@ -226,6 +277,10 @@
                     <input type="text" name="truck_type" x-model="editTanker.truck_type" required class="glass-input w-full px-4 py-2 rounded-lg">
                 </div>
                 <div>
+                    <label class="block text-sm text-gray-400 mb-1">مۆدێلی بارهەڵگر</label>
+                    <input type="text" name="truck_model" x-model="editTanker.truck_model" class="glass-input w-full px-4 py-2 rounded-lg">
+                </div>
+                <div>
                     <label class="block text-sm text-gray-400 mb-1">ڕەنگی بارهەڵگر</label>
                     <input type="text" name="truck_color" x-model="editTanker.truck_color" class="glass-input w-full px-4 py-2 rounded-lg">
                 </div>
@@ -240,28 +295,69 @@
 
     @can('edit tankers')
     <div x-show="showSaleModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" style="display: none;">
-        <div @click.away="showSaleModal = false" class="glass-card max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6">
+        <div @click.away="showSaleModal = false" class="glass-card max-h-[92vh] w-full max-w-5xl overflow-y-auto p-6">
             <div class="mb-5 flex items-center justify-between">
                 <div>
-                    <h3 class="text-xl font-bold">فرۆشتنی خەت</h3>
+                    <h3 class="text-xl font-bold" x-text="saleData.operation_type === 'truck_change' ? 'گۆڕینی بارهەڵگر' : 'فرۆشتنی خەت'"></h3>
                     <p class="mt-1 text-sm text-slate-500">خاوەنی ئێستا: <span class="font-bold" x-text="saleTanker?.sequence_owner || '-'"></span></p>
                 </div>
                 <button type="button" @click="showSaleModal = false" class="text-2xl text-slate-400 hover:text-slate-900">&times;</button>
             </div>
-            <form :action="saleTanker ? '/tankers/' + saleTanker.id + '/sell' : ''" method="POST" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <form :action="saleTanker ? '/tankers/' + saleTanker.id + '/sell' : ''" method="POST" class="space-y-5">
                 @csrf
-                <div><label class="form-label mb-1 block">ناوی خاوەنی نوێ *</label><input type="text" name="new_owner" x-model="saleData.new_owner" required class="glass-input w-full rounded-lg px-4 py-2"></div>
-                <div><label class="form-label mb-1 block">ژمارەی مۆبایلی خاوەنی نوێ</label><input type="text" name="new_owner_phone" x-model="saleData.new_owner_phone" class="glass-input w-full rounded-lg px-4 py-2"></div>
-                <div><label class="form-label mb-1 block">ژمارەی تابلۆ *</label><input type="text" name="new_plate_number" x-model="saleData.new_plate_number" required class="glass-input w-full rounded-lg px-4 py-2"></div>
-                <div><label class="form-label mb-1 block">VIN</label><input type="text" name="new_vin" x-model="saleData.new_vin" class="glass-input w-full rounded-lg px-4 py-2"></div>
-                <div><label class="form-label mb-1 block">جۆری بارهەڵگر *</label><input type="text" name="new_truck_type" x-model="saleData.new_truck_type" required class="glass-input w-full rounded-lg px-4 py-2"></div>
-                <div><label class="form-label mb-1 block">ڕەنگی بارهەڵگر</label><input type="text" name="new_truck_color" x-model="saleData.new_truck_color" class="glass-input w-full rounded-lg px-4 py-2"></div>
-                <div><label class="form-label mb-1 block">بەرواری فرۆشتن *</label><input type="date" name="transferred_at" x-model="saleData.transferred_at" required class="glass-input w-full rounded-lg px-4 py-2"></div>
-                <div><label class="form-label mb-1 block">تێبینی</label><input type="text" name="note" x-model="saleData.note" class="glass-input w-full rounded-lg px-4 py-2"></div>
-                <p class="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 md:col-span-2">ئەگەر بارهەڵگرەکە نەگۆڕاوە، زانیارییەکانی وەک خۆیان بهێڵەوە. هەموو زانیارییە کۆن و نوێیەکان لە مێژوودا دەمێننەوە.</p>
-                <div class="flex justify-end gap-3 pt-2 md:col-span-2">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                        <label class="form-label mb-1 block">جۆری کردار *</label>
+                        <select name="operation_type" x-model="saleData.operation_type" class="glass-input w-full rounded-lg px-4 py-2" required>
+                            <option value="sale_with_truck">فرۆشتنی خەت لەگەڵ هەمان بارهەڵگر</option>
+                            <option value="sale_line_only">فرۆشتنی خەت تەنها و گۆڕینی بارهەڵگر</option>
+                            <option value="truck_change">گۆڕینی بارهەڵگر - خاوەن وەک خۆی دەمێنێتەوە</option>
+                        </select>
+                    </div>
+                    <div><label class="form-label mb-1 block">ژمارەی بەڵگەنامە (No) *</label><input type="text" name="document_number" x-model="saleData.document_number" required maxlength="100" inputmode="numeric" autocomplete="off" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                    <div><label class="form-label mb-1 block">بەرواری کردار *</label><input type="date" name="transferred_at" x-model="saleData.transferred_at" required class="glass-input w-full rounded-lg px-4 py-2"></div>
+                </div>
+
+                <div x-show="saleData.operation_type !== 'truck_change'" class="rounded-xl border border-slate-200 p-4">
+                    <h4 class="mb-3 font-bold text-slate-800">زانیاری کڕیار</h4>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <div><label class="form-label mb-1 block">ناوی کڕیار *</label><input type="text" name="new_owner" x-model="saleData.new_owner" :required="saleData.operation_type !== 'truck_change'" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                        <div><label class="form-label mb-1 block">ژمارەی مۆبایل <span x-show="saleData.operation_type === 'sale_line_only'">*</span></label><input type="text" name="new_owner_phone" x-model="saleData.new_owner_phone" :required="saleData.operation_type === 'sale_line_only'" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                        <div><label class="form-label mb-1 block">ژمارەی پێناس</label><input type="text" name="buyer_national_id" x-model="saleData.buyer_national_id" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                        <div><label class="form-label mb-1 block">کۆدی ئاسایش</label><input type="text" name="buyer_security_code" x-model="saleData.buyer_security_code" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                        <div><label class="form-label mb-1 block">الوکیل</label><input type="text" name="buyer_agent" x-model="saleData.buyer_agent" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                        <div><label class="form-label mb-1 block">رقم الوکالة</label><input type="text" name="buyer_agency_number" x-model="saleData.buyer_agency_number" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                        <div><label class="form-label mb-1 block">تاریخ</label><input type="date" name="buyer_document_date" x-model="saleData.buyer_document_date" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                    </div>
+                </div>
+
+                <div x-show="saleData.operation_type !== 'truck_change'" class="rounded-xl border border-slate-200 p-4">
+                    <h4 class="mb-3 font-bold text-slate-800">زانیاری فرۆشیار</h4>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <div><label class="form-label mb-1 block">ژمارەی پێناس</label><input type="text" name="seller_national_id" x-model="saleData.seller_national_id" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                        <div><label class="form-label mb-1 block">کۆدی ئاسایش</label><input type="text" name="seller_security_code" x-model="saleData.seller_security_code" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                        <div><label class="form-label mb-1 block">الوکیل</label><input type="text" name="seller_agent" x-model="saleData.seller_agent" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                        <div><label class="form-label mb-1 block">رقم الوکالة</label><input type="text" name="seller_agency_number" x-model="saleData.seller_agency_number" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                        <div><label class="form-label mb-1 block">تاریخ</label><input type="date" name="seller_document_date" x-model="saleData.seller_document_date" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                    </div>
+                </div>
+
+                <div x-show="saleData.operation_type === 'sale_line_only' || saleData.operation_type === 'truck_change'" class="rounded-xl border border-cyan-200 bg-cyan-50/40 p-4">
+                    <h4 class="mb-3 font-bold text-cyan-900">زانیاری بارهەڵگری نوێ</h4>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <div><label class="form-label mb-1 block">ژمارەی تابلۆ *</label><input type="text" name="new_plate_number" x-model="saleData.new_plate_number" :required="saleData.operation_type === 'sale_line_only' || saleData.operation_type === 'truck_change'" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                        <div><label class="form-label mb-1 block">VIN *</label><input type="text" name="new_vin" x-model="saleData.new_vin" :required="saleData.operation_type === 'sale_line_only' || saleData.operation_type === 'truck_change'" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                        <div><label class="form-label mb-1 block">جۆری بارهەڵگر *</label><input type="text" name="new_truck_type" x-model="saleData.new_truck_type" :required="saleData.operation_type === 'sale_line_only' || saleData.operation_type === 'truck_change'" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                        <div><label class="form-label mb-1 block">مۆدێل *</label><input type="text" name="new_truck_model" x-model="saleData.new_truck_model" :required="saleData.operation_type === 'sale_line_only' || saleData.operation_type === 'truck_change'" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                        <div><label class="form-label mb-1 block">ڕەنگ *</label><input type="text" name="new_truck_color" x-model="saleData.new_truck_color" :required="saleData.operation_type === 'sale_line_only' || saleData.operation_type === 'truck_change'" class="glass-input w-full rounded-lg px-4 py-2"></div>
+                    </div>
+                    <p x-show="saleData.operation_type === 'sale_line_only'" class="mt-3 text-xs text-cyan-800">ڕەنگ لە بەڵگەنامەی فرۆشتنی جۆری دووەمدا چاپ ناکرێت، بەڵام لە سیستەم و مێژوودا هەڵدەگیرێت.</p>
+                </div>
+
+                <div><label class="form-label mb-1 block">تێبینی</label><textarea name="note" x-model="saleData.note" rows="2" class="glass-input w-full rounded-lg px-4 py-2"></textarea></div>
+                <div class="flex justify-end gap-3 pt-2">
                     <button type="button" @click="showSaleModal = false" class="btn-secondary rounded-lg px-4 py-2">پاشگەزبوونەوە</button>
-                    <button type="submit" class="btn-primary rounded-lg px-6 py-2 font-medium">تۆمارکردنی فرۆشتن</button>
+                    <button type="submit" class="btn-primary rounded-lg px-6 py-2 font-medium">تۆمارکردن و کردنەوەی بەڵگەنامە</button>
                 </div>
             </form>
         </div>
@@ -283,14 +379,18 @@
                 <template x-for="transfer in (historyTanker?.ownership_transfers || [])" :key="transfer.id">
                     <div class="rounded-xl border border-slate-200 bg-white p-4">
                         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                            <span class="rounded-full px-2.5 py-1 text-xs font-bold" :class="transfer.change_type === 'sale' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'" x-text="transfer.change_type === 'sale' ? 'فرۆشتن' : 'دەستکاری'"></span>
-                            <span class="text-xs text-slate-500" x-text="transfer.transferred_at.slice(0, 10) + (transfer.recorder ? ' — ' + transfer.recorder.name : '')"></span>
+                            <span class="rounded-full px-2.5 py-1 text-xs font-bold" :class="transfer.change_type === 'truck_change' ? 'bg-cyan-100 text-cyan-700' : (transfer.change_type === 'correction' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700')" x-text="({ sale_with_truck: 'فرۆشتنی خەت لەگەڵ بارهەڵگر', sale_line_only: 'فرۆشتنی خەت تەنها', truck_change: 'گۆڕینی بارهەڵگر', sale: 'فرۆشتن', correction: 'دەستکاری' })[transfer.change_type] || transfer.change_type"></span>
+                            <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                <span x-show="transfer.document_number" class="rounded-md bg-slate-100 px-2 py-1 font-bold text-slate-700" x-text="'No: ' + transfer.document_number"></span>
+                                <span x-text="transfer.transferred_at.slice(0, 10) + (transfer.recorder ? ' — ' + transfer.recorder.name : '')"></span>
+                            </div>
                         </div>
                         <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                            <div class="rounded-lg bg-rose-50 p-3"><div class="mb-1 text-xs font-bold text-rose-700">پێشتر</div><div class="font-semibold" x-text="transfer.previous_owner || '-'"></div><div class="text-sm text-slate-600" x-text="(transfer.previous_owner_phone || '-') + ' — ' + transfer.previous_plate_number"></div><div class="mt-1 text-xs text-slate-500" x-text="transfer.previous_truck_type + ' — VIN: ' + (transfer.previous_vin || '-') + ' — ' + (transfer.previous_truck_color || '-')"></div></div>
-                            <div class="rounded-lg bg-emerald-50 p-3"><div class="mb-1 text-xs font-bold text-emerald-700">دوای گواستنەوە</div><div class="font-semibold" x-text="transfer.new_owner || '-'"></div><div class="text-sm text-slate-600" x-text="(transfer.new_owner_phone || '-') + ' — ' + transfer.new_plate_number"></div><div class="mt-1 text-xs text-slate-500" x-text="transfer.new_truck_type + ' — VIN: ' + (transfer.new_vin || '-') + ' — ' + (transfer.new_truck_color || '-')"></div></div>
+                            <div class="rounded-lg bg-rose-50 p-3"><div class="mb-1 text-xs font-bold text-rose-700">پێشتر</div><div class="font-semibold" x-text="transfer.previous_owner || '-'"></div><div class="text-sm text-slate-600" x-text="(transfer.previous_owner_phone || '-') + ' — ' + transfer.previous_plate_number"></div><div class="mt-1 text-xs text-slate-500" x-text="transfer.previous_truck_type + ' — مۆدێل: ' + (transfer.previous_truck_model || '-') + ' — VIN: ' + (transfer.previous_vin || '-') + ' — ' + (transfer.previous_truck_color || '-')"></div></div>
+                            <div class="rounded-lg bg-emerald-50 p-3"><div class="mb-1 text-xs font-bold text-emerald-700">دوای کردار</div><div class="font-semibold" x-text="transfer.new_owner || '-'"></div><div class="text-sm text-slate-600" x-text="(transfer.new_owner_phone || '-') + ' — ' + transfer.new_plate_number"></div><div class="mt-1 text-xs text-slate-500" x-text="transfer.new_truck_type + ' — مۆدێل: ' + (transfer.new_truck_model || '-') + ' — VIN: ' + (transfer.new_vin || '-') + ' — ' + (transfer.new_truck_color || '-')"></div></div>
                         </div>
                         <div class="mt-2 text-xs text-slate-500" x-show="transfer.note" x-text="transfer.note"></div>
+                        <a x-show="transfer.document_path" :href="'/tankers/' + historyTanker.id + '/transfers/' + transfer.id + '/document'" target="_blank" class="mt-3 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100">کردنەوەی بەڵگەنامەی چاپ</a>
                     </div>
                 </template>
                 <div x-show="!(historyTanker?.ownership_transfers || []).length" class="py-8 text-center text-slate-500">هێشتا هیچ فرۆشتنێک بۆ ئەم خەتە تۆمار نەکراوە.</div>

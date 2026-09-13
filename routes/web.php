@@ -44,6 +44,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/tankers', [TankerController::class, 'store'])->middleware('can:create tankers')->name('tankers.store');
     Route::put('/tankers/{tanker}', [TankerController::class, 'update'])->middleware('can:edit tankers')->name('tankers.update');
     Route::post('/tankers/{tanker}/sell', [TankerController::class, 'sell'])->middleware('can:edit tankers')->name('tankers.sell');
+    Route::get('/tankers/{tanker}/transfers/{transfer}/document', [TankerController::class, 'transferDocument'])->middleware('can:view tankers')->name('tankers.transfers.document');
     Route::delete('/tankers/{tanker}', [TankerController::class, 'destroy'])->middleware('can:delete tankers')->name('tankers.destroy');
     Route::patch('/tankers/{tanker}/block', [TankerController::class, 'block'])->middleware('can:edit tankers')->name('tankers.block');
     Route::delete('/tankers/{tanker}/block', [TankerController::class, 'unblock'])->middleware('can:edit tankers')->name('tankers.unblock');

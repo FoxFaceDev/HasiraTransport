@@ -9,7 +9,7 @@ class Tanker extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['plate_number', 'driver_id', 'sequence_number', 'sequence_owner', 'sequence_owner_phone', 'vin', 'truck_type', 'truck_color', 'blocked_at'];
+    protected $fillable = ['plate_number', 'driver_id', 'sequence_number', 'sequence_owner', 'sequence_owner_phone', 'vin', 'truck_type', 'truck_model', 'truck_color', 'blocked_at'];
 
     protected $casts = [
         'blocked_at' => 'datetime',

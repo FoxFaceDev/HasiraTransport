@@ -22,6 +22,8 @@ class AuditUserOperation
         'remember_token',
         'token',
         'secret',
+        'national_id',
+        'security_code',
         'authorization',
         'cookie',
     ];

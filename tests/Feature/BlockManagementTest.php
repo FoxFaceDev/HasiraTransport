@@ -72,7 +72,8 @@ it('keeps blocked tankers visible in the gatekeeper snapshot and original page',
         ->assertOk()
         ->assertSee('BLOCK-17')
         ->assertSee('blocked-row', false)
-        ->assertSee(route('tankers.unblock', $this->tanker), false);
+        ->assertSee("actionsTanker.id + '/block'", false)
+        ->assertSee('لابردنی بلۆک');
 
     $this->getJson(route('gatekeeper.sync.snapshot'))
         ->assertOk()
