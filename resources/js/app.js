@@ -40,7 +40,7 @@ function sizeTableColumns(table) {
         const label = header.textContent.replace(/\s+/g, ' ').trim();
         let columnClass = null;
 
-        if (label === '#' || label === 'ڕیزبەندی' || label === 'زنجیرە') {
+        if (label === '#' || label === 'ڕیزبەندی') {
             columnClass = 'table-col-rank';
         } else if (label.includes('تابلۆ') || label.includes('تەنکەر')) {
             columnClass = 'table-col-plate';

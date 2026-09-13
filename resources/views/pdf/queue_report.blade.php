@@ -2,7 +2,7 @@
 <html lang="ku" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>ڕاپۆرتی تەنکەرەکان</title>
+    <title>کەمپی حەسیرە - ڕاپۆرتی مانگانە</title>
     <style>
         @page {
             footer: html_report-footer;
@@ -38,14 +38,15 @@
             border: 0;
         }
 
-        .brand-mark {
-            background-color: #eaf3ff;
-            color: #2563eb;
-            font-size: 18pt;
-            font-weight: bold;
-            height: 44px;
+        .brand-logo {
+            height: 52px;
             text-align: center;
-            width: 44px;
+            width: 52px;
+        }
+
+        .brand-logo img {
+            height: 52px;
+            width: 52px;
         }
 
         h1 {
@@ -142,6 +143,7 @@
     </style>
 </head>
 <body>
+    @php($logoSvg = preg_replace('/<svg\b/', '<svg width="52" height="52"', file_get_contents(public_path('icons/hasira-mark.svg')), 1))
     <htmlpagefooter name="report-footer">
         <table class="footer-table" dir="rtl">
             <tr>
@@ -154,10 +156,12 @@
     <div class="report-header">
         <table dir="rtl">
             <tr>
-                <td class="brand-mark">ح</td>
+                <td class="brand-logo">
+                    <img src="data:image/svg+xml;base64,{{ base64_encode($logoSvg) }}" width="52" height="52" alt="Hasira logo">
+                </td>
                 <td style="padding-right: 14px;">
-                    <h1>ڕاپۆرتی دۆخی تەنکەرەکان</h1>
-                    <div class="subtitle">تۆماری دۆخی تەنکەرەکان پێش سفرکردنەوەی سەرەکان</div>
+                    <h1>کەمپی حەسیرە</h1>
+                    <div class="subtitle">ڕاپۆرتی مانگانە</div>
                 </td>
             </tr>
         </table>
@@ -191,7 +195,7 @@
     <table class="data-table" dir="rtl">
         <thead>
             <tr>
-                <th width="7%">زنجیرە</th>
+                <th width="7%">ڕیزبەندی</th>
                 <th width="12%">ژمارەی تەنکەر</th>
                 <th width="16%">خاوەنی خەت</th>
                 <th width="12%">مۆبایل</th>

@@ -2,7 +2,7 @@
     <table class="w-full text-right border-collapse">
         <thead>
             <tr class="border-b border-white/10 text-gray-400">
-                <th class="py-3 px-4 font-normal">زنجیرە</th>
+                <th class="py-3 px-4 font-normal">ڕیزبەندی</th>
                 <th class="py-3 px-4 font-normal">ژمارەی تەنکەر</th>
                 <th class="py-3 px-4 font-normal">خاوەنی خەت</th>
                 <th class="py-3 px-4 font-normal">مۆبایل</th>

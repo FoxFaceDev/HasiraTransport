@@ -93,6 +93,33 @@ it('embeds the initial truck snapshot in the gatekeeper page', function () {
         ->assertDontSee('x-text="index + 1"', false);
 });
 
+it('uses the ranking label throughout the gatekeeper tables and monthly PDF', function () {
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.index'))
+        ->assertOk()
+        ->assertSee('ڕیزبەندی')
+        ->assertDontSee('زنجیرە');
+
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.schedule', ['date' => '2026-09-02']))
+        ->assertOk()
+        ->assertSee('ڕیزبەندی')
+        ->assertDontSee('زنجیرە');
+
+    $html = view('pdf.queue_report', [
+        'tankers' => collect([$this->tanker->load('latestQueue')]),
+        'generatedAt' => now(),
+        'generatedBy' => $this->gatekeeper,
+    ])->render();
+
+    expect($html)
+        ->toContain('کەمپی حەسیرە')
+        ->toContain('ڕاپۆرتی مانگانە')
+        ->toContain('ڕیزبەندی')
+        ->toContain('data:image/svg+xml;base64,')
+        ->not->toContain('زنجیرە');
+});
+
 it('reverts a status by clicking its selected action again without showing another button', function () {
     $this->actingAs($this->gatekeeper)
         ->get(route('gatekeeper.index'))
@@ -255,6 +282,7 @@ it('archives every truck status during reset and filters the history by month', 
     expect(Queue::query()->count())->toBe(0)
         ->and(QueueArchive::query()->count())->toBe(1)
         ->and(QueueArchiveItem::query()->count())->toBe(2)
+        ->and(QueueArchive::query()->value('report_file'))->toContain('2026_09_12_12_00_00')
         ->and(QueueArchiveItem::query()->where('tanker_id', $this->tanker->id)->value('status'))->toBe('yellow')
         ->and(QueueArchiveItem::query()->where('tanker_id', $pendingTanker->id)->value('status'))->toBe('pending');
 
@@ -264,6 +292,27 @@ it('archives every truck status during reset and filters the history by month', 
         ->assertSee('TEST-100')
         ->assertSee('Delayed')
         ->assertDontSee('TEST-101');
+});
+
+it('orders the reset archive and PDF data numerically by ranking', function () {
+    foreach ([10, 2] as $ranking) {
+        Tanker::create([
+            'sequence_number' => (string) $ranking,
+            'sequence_owner' => 'Owner '.$ranking,
+            'plate_number' => 'RESET-RANK-'.$ranking,
+            'truck_type' => 'Tanker',
+        ]);
+    }
+
+    Storage::fake('public');
+
+    $this->actingAs($this->gatekeeper)
+        ->post(route('gatekeeper.reset'))
+        ->assertOk()
+        ->assertHeader('content-type', 'application/pdf');
+
+    expect(QueueArchiveItem::query()->orderBy('id')->pluck('sequence_number')->all())
+        ->toBe(['2', '10', '12']);
 });
 
 it('includes the current not-yet-reset trucks in status history', function () {

@@ -304,25 +304,27 @@ class QueueController extends Controller
 
     public function resetQueue()
     {
-        $generatedAt = now();
+        $resetAt = now();
+        $generatedAt = $resetAt->copy()->timezone('Asia/Baghdad');
         $fileName = 'tanker_queue_report_'.$generatedAt->format('Y_m_d_H_i_s').'.pdf';
         $filePath = 'reports/'.$fileName;
         $disk = Storage::disk('public');
 
         try {
-            $pdfContents = DB::transaction(function () use ($disk, $filePath, $generatedAt) {
+            $pdfContents = DB::transaction(function () use ($disk, $filePath, $resetAt, $generatedAt) {
                 // Lock the current queue snapshot so the PDF and reset describe
                 // exactly the same records.
                 Queue::query()->lockForUpdate()->get();
 
                 $tankers = Tanker::with('latestQueue')
+                    ->orderByRaw('CAST(sequence_number AS UNSIGNED)')
                     ->orderBy('sequence_number')
                     ->lockForUpdate()
                     ->get();
 
                 $archive = QueueArchive::create([
                     'reset_by' => auth()->id(),
-                    'reset_at' => $generatedAt,
+                    'reset_at' => $resetAt,
                     'report_file' => $filePath,
                 ]);
 
@@ -351,7 +353,7 @@ class QueueController extends Controller
                     'generatedAt' => $generatedAt,
                     'generatedBy' => auth()->user(),
                 ], [], [
-                    'title' => 'ڕاپۆرتی تەنکەرەکان',
+                    'title' => 'کەمپی حەسیرە - ڕاپۆرتی مانگانە',
                     'format' => 'A4-L',
                     'orientation' => 'L',
                     'default_font' => 'notosansarabic',
@@ -434,6 +436,7 @@ class QueueController extends Controller
     private function snapshot(): array
     {
         $tankers = Tanker::with('latestQueue')
+            ->orderByRaw('CAST(sequence_number AS UNSIGNED)')
             ->orderBy('sequence_number')
             ->get();
 

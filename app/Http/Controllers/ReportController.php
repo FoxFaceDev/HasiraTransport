@@ -2,26 +2,28 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class ReportController extends Controller
 {
     public function index()
     {
-        $files = \Illuminate\Support\Facades\Storage::disk('public')->files('reports');
-        
+        $disk = Storage::disk('public');
+        $files = $disk->files('reports');
+
         $reports = [];
         foreach ($files as $file) {
             $reports[] = [
                 'name' => basename($file),
-                'size' => round(\Illuminate\Support\Facades\Storage::disk('public')->size($file) / 1024, 2) . ' KB',
-                'time' => \Carbon\Carbon::createFromTimestamp(\Illuminate\Support\Facades\Storage::disk('public')->lastModified($file))->format('Y-m-d H:i:s'),
-                'path' => $file
+                'size' => round($disk->size($file) / 1024, 2).' KB',
+                'time' => Carbon::createFromTimestamp($disk->lastModified($file), 'Asia/Baghdad')->format('Y-m-d H:i:s'),
+                'path' => $file,
             ];
         }
 
         // Sort descending by time
-        usort($reports, function($a, $b) {
+        usort($reports, function ($a, $b) {
             return strtotime($b['time']) - strtotime($a['time']);
         });
 
@@ -30,18 +32,19 @@ class ReportController extends Controller
 
     public function download($fileName)
     {
-        $filePath = 'reports/' . $fileName;
-        
-        if (!\Illuminate\Support\Facades\Storage::disk('public')->exists($filePath)) {
+        $filePath = 'reports/'.$fileName;
+        $disk = Storage::disk('public');
+
+        if (! $disk->exists($filePath)) {
             abort(404);
         }
 
-        $timestamp = \Illuminate\Support\Facades\Storage::disk('public')->lastModified($filePath);
-        $displayName = 'ڕاپۆرتی_' . \Carbon\Carbon::createFromTimestamp($timestamp)->format('Y_m_d') . '.pdf';
+        $timestamp = $disk->lastModified($filePath);
+        $displayName = 'ڕاپۆرتی_'.Carbon::createFromTimestamp($timestamp, 'Asia/Baghdad')->format('Y_m_d').'.pdf';
 
-        return response()->file(\Illuminate\Support\Facades\Storage::disk('public')->path($filePath), [
+        return response()->file($disk->path($filePath), [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . urlencode($displayName) . '"'
+            'Content-Disposition' => 'inline; filename="'.urlencode($displayName).'"',
         ]);
     }
 }
