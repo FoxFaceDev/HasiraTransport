@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#2563eb">
+    <link rel="icon" type="image/svg+xml" href="/icons/hasira-mark.svg?v=2">
     <link rel="manifest" href="/manifest.webmanifest">
     <title>{{ config('app.name', 'Hasira Transport') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -92,14 +93,14 @@
             @endrole
 
             @can('view gatekeeper')
+            <a href="{{ route('gatekeeper.history') }}" title="مێژووی خەتەکان" class="nav-link {{ request()->routeIs('gatekeeper.history') ? 'is-active' : '' }}">
+                <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 2m6-2a9 9 0 1 1-3-6.7M21 3v6h-6"/></svg>
+                <span>مێژووی خەتەکان</span>
+            </a>
             <div class="sidebar-section-title pt-4 pb-1 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">لیستی دۆخەکان</div>
             <a href="{{ route('gatekeeper.schedule') }}" title="لیستی ئەمڕۆ" class="nav-link {{ request()->routeIs('gatekeeper.schedule') ? 'is-active' : '' }}">
                 <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 2v3m8-3v3M3 9h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Zm3 9h3m2 0h3m-8 4h3"/></svg>
                 <span>لیستی ئەمڕۆ</span>
-            </a>
-            <a href="{{ route('gatekeeper.history') }}" title="مێژووی دۆخەکان" class="nav-link {{ request()->routeIs('gatekeeper.history') ? 'is-active' : '' }}">
-                <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 2m6-2a9 9 0 1 1-3-6.7M21 3v6h-6"/></svg>
-                <span>مێژووی دۆخەکان</span>
             </a>
             <a href="{{ route('gatekeeper.filter', 'green') }}" title="هاتووەکان" class="nav-link is-green {{ request()->is('*green') ? 'is-active' : '' }}">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 ml-4 ring-4 ring-emerald-50"></span>

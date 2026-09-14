@@ -11,7 +11,7 @@ class QueueArchiveItem extends Model
 
     protected $fillable = [
         'queue_archive_id', 'tanker_id', 'sequence_number', 'sequence_owner',
-        'sequence_owner_phone', 'plate_number', 'vin', 'truck_type', 'truck_color',
+        'sequence_owner_phone', 'plate_number', 'vin', 'truck_type', 'truck_model', 'truck_color',
         'status', 'scheduled_date', 'scheduled_time', 'note', 'status_updated_at',
     ];
 

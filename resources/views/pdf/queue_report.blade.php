@@ -195,14 +195,16 @@
     <table class="data-table" dir="rtl">
         <thead>
             <tr>
-                <th width="7%">ڕیزبەندی</th>
-                <th width="12%">ژمارەی تەنکەر</th>
-                <th width="16%">خاوەنی خەت</th>
-                <th width="12%">مۆبایل</th>
-                <th width="10%">دۆخ</th>
-                <th width="20%">تێبینی</th>
-                <th width="13%">بەرواری دیاریکراو</th>
-                <th width="10%">کاتی دیاریکراو</th>
+                <th width="6%">ڕیزبەندی</th>
+                <th width="10%">ژمارەی تەنکەر</th>
+                <th width="14%">خاوەنی خەت</th>
+                <th width="10%">مۆبایل</th>
+                <th width="10%">جۆری بارهەڵگر</th>
+                <th width="8%">مۆدێل</th>
+                <th width="8%">دۆخ</th>
+                <th width="13%">تێبینی</th>
+                <th width="12%">بەرواری دیاریکراو</th>
+                <th width="9%">کاتی دیاریکراو</th>
             </tr>
         </thead>
         <tbody>
@@ -215,6 +217,8 @@
                 <td class="center">{{ $tanker->plate_number ?: '-' }}</td>
                 <td>{{ $tanker->sequence_owner ?: '-' }}</td>
                 <td class="center">{{ $tanker->sequence_owner_phone ?: '-' }}</td>
+                <td class="center">{{ $tanker->truck_type ?: '-' }}</td>
+                <td class="center">{{ $tanker->truck_model ?: '-' }}</td>
                 <td class="center status-{{ $status }}">{{ $statusLabels[$status] ?? $status }}</td>
                 <td class="{{ $queue?->note ? '' : 'muted' }}">{{ $queue?->note ?: '-' }}</td>
                 <td class="center {{ $queue?->scheduled_date ? '' : 'muted' }}">{{ $queue?->scheduled_date ? \Carbon\Carbon::parse($queue->scheduled_date)->format('Y-m-d') : '-' }}</td>
@@ -222,7 +226,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="8" class="empty-state">هیچ تەنکەرێک تۆمار نەکراوە.</td>
+                <td colspan="10" class="empty-state">هیچ تەنکەرێک تۆمار نەکراوە.</td>
             </tr>
             @endforelse
         </tbody>

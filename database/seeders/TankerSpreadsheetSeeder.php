@@ -54,7 +54,7 @@ class TankerSpreadsheetSeeder extends Seeder
     }
 
     /**
-     * @return array<int, array{sequence_number: string, sequence_owner: string, sequence_owner_phone: string, plate_number: string, vin: string, truck_type: string, truck_color: string}>
+     * @return array<int, array{sequence_number: string, sequence_owner: string, sequence_owner_phone: string, plate_number: string, vin: string, truck_type: string, truck_model: ?string, truck_color: string}>
      */
     private function readRows(string $path): array
     {
@@ -85,13 +85,18 @@ class TankerSpreadsheetSeeder extends Seeder
                     continue;
                 }
 
+                [$truckType, $truckModel] = $this->splitTruckTypeAndModel(
+                    $this->required($cells['F'] ?? null, 'TYPE AND MODEL', $rowNumber)
+                );
+
                 $row = [
                     'sequence_number' => $this->required($cells['A'] ?? null, 'SEQUENCE', $rowNumber),
                     'sequence_owner' => $this->required($cells['B'] ?? null, 'SEQUENCE OWNER', $rowNumber),
                     'plate_number' => $this->required($cells['C'] ?? null, 'TRUCK PLATE NUM', $rowNumber),
                     'vin' => $this->required($cells['D'] ?? null, 'VIN', $rowNumber),
                     'sequence_owner_phone' => $this->required($cells['E'] ?? null, 'PHONE NUMBER', $rowNumber),
-                    'truck_type' => $this->required($cells['F'] ?? null, 'TYPE AND MODEL', $rowNumber),
+                    'truck_type' => $truckType,
+                    'truck_model' => $truckModel,
                     'truck_color' => $this->required($cells['G'] ?? null, 'COLOUR', $rowNumber),
                 ];
                 $plateKey = mb_strtolower($row['plate_number']);
@@ -244,5 +249,15 @@ class TankerSpreadsheetSeeder extends Seeder
         ]));
 
         return strlen($digits) === 11 && str_starts_with($digits, '0') ? substr($digits, 1) : $digits;
+    }
+
+    /** @return array{string, ?string} */
+    private function splitTruckTypeAndModel(string $combined): array
+    {
+        if (preg_match('/^(.+?)\s+((?:19|20)\d{2})$/u', trim($combined), $matches)) {
+            return [trim($matches[1]), $matches[2]];
+        }
+
+        return [trim($combined), null];
     }
 }

@@ -98,9 +98,9 @@
             </tr></thead>
             <tbody x-ref="tankerBlockRows">
                 @foreach($tankers as $tanker)
-                <tr data-block-search="{{ $tanker->sequence_number }} {{ $tanker->sequence_owner }} {{ $tanker->sequence_owner_phone }} {{ $tanker->plate_number }} {{ $tanker->vin }} {{ $tanker->truck_type }} {{ $tanker->truck_color }} {{ $tanker->driver?->name }}" class="border-b border-white/5 transition-colors hover:bg-white/5">
+                <tr data-block-search="{{ $tanker->sequence_number }} {{ $tanker->sequence_owner }} {{ $tanker->sequence_owner_phone }} {{ $tanker->plate_number }} {{ $tanker->vin }} {{ $tanker->truck_type }} {{ $tanker->truck_model }} {{ $tanker->truck_color }} {{ $tanker->driver?->name }}" class="border-b border-white/5 transition-colors hover:bg-white/5">
                     <td class="py-3 px-4 font-medium">{{ $tanker->plate_number }}</td>
-                    <td class="py-3 px-4 text-slate-600">ڕیزبەندی: {{ $tanker->sequence_number ?: '-' }} · {{ $tanker->driver?->name ?: 'بێ شۆفێر' }}</td>
+                    <td class="py-3 px-4 text-slate-600">ڕیزبەندی: {{ $tanker->sequence_number ?: '-' }} · {{ $tanker->truck_type ?: '-' }} · مۆدێل: {{ $tanker->truck_model ?: '-' }} · {{ $tanker->driver?->name ?: 'بێ شۆفێر' }}</td>
                     <td class="py-3 px-4 text-slate-500">{{ $tanker->blocked_at?->format('Y-m-d H:i') }}</td>
                     <td class="py-3 px-4">
                         @can('edit tankers')

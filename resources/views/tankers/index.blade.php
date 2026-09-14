@@ -128,7 +128,7 @@
                 </div>
                 <div>
                     <label class="block text-sm text-gray-400 mb-1">مۆدێلی بارهەڵگر</label>
-                    <input type="text" name="truck_model" class="glass-input w-full px-4 py-2 rounded-lg">
+                    <input type="text" name="truck_model" inputmode="numeric" class="glass-input w-full px-4 py-2 rounded-lg" required>
                 </div>
                 <div>
                     <label class="block text-sm text-gray-400 mb-1">VIN</label>
@@ -278,7 +278,7 @@
                 </div>
                 <div>
                     <label class="block text-sm text-gray-400 mb-1">مۆدێلی بارهەڵگر</label>
-                    <input type="text" name="truck_model" x-model="editTanker.truck_model" class="glass-input w-full px-4 py-2 rounded-lg">
+                    <input type="text" name="truck_model" x-model="editTanker.truck_model" inputmode="numeric" required class="glass-input w-full px-4 py-2 rounded-lg">
                 </div>
                 <div>
                     <label class="block text-sm text-gray-400 mb-1">ڕەنگی بارهەڵگر</label>
@@ -310,7 +310,7 @@
                         <label class="form-label mb-1 block">جۆری کردار *</label>
                         <select name="operation_type" x-model="saleData.operation_type" class="glass-input w-full rounded-lg px-4 py-2" required>
                             <option value="sale_with_truck">فرۆشتنی خەت لەگەڵ هەمان بارهەڵگر</option>
-                            <option value="sale_line_only">فرۆشتنی خەت تەنها و گۆڕینی بارهەڵگر</option>
+                            <option value="sale_line_only">فرۆشتنی خەت و گۆڕینی بارهەڵگر</option>
                             <option value="truck_change">گۆڕینی بارهەڵگر - خاوەن وەک خۆی دەمێنێتەوە</option>
                         </select>
                     </div>
@@ -379,7 +379,7 @@
                 <template x-for="transfer in (historyTanker?.ownership_transfers || [])" :key="transfer.id">
                     <div class="rounded-xl border border-slate-200 bg-white p-4">
                         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                            <span class="rounded-full px-2.5 py-1 text-xs font-bold" :class="transfer.change_type === 'truck_change' ? 'bg-cyan-100 text-cyan-700' : (transfer.change_type === 'correction' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700')" x-text="({ sale_with_truck: 'فرۆشتنی خەت لەگەڵ بارهەڵگر', sale_line_only: 'فرۆشتنی خەت تەنها', truck_change: 'گۆڕینی بارهەڵگر', sale: 'فرۆشتن', correction: 'دەستکاری' })[transfer.change_type] || transfer.change_type"></span>
+                            <span class="rounded-full px-2.5 py-1 text-xs font-bold" :class="transfer.change_type === 'truck_change' ? 'bg-cyan-100 text-cyan-700' : (transfer.change_type === 'correction' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700')" x-text="({ sale_with_truck: 'فرۆشتنی خەت لەگەڵ بارهەڵگر', sale_line_only: 'فرۆشتنی خەت و گۆڕینی بارهەڵگر', truck_change: 'گۆڕینی بارهەڵگر', sale: 'فرۆشتن', correction: 'دەستکاری' })[transfer.change_type] || transfer.change_type"></span>
                             <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                                 <span x-show="transfer.document_number" class="rounded-md bg-slate-100 px-2 py-1 font-bold text-slate-700" x-text="'No: ' + transfer.document_number"></span>
                                 <span x-text="transfer.transferred_at.slice(0, 10) + (transfer.recorder ? ' — ' + transfer.recorder.name : '')"></span>

@@ -222,6 +222,8 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
                     tanker.sequence_owner,
                     tanker.sequence_owner_phone,
                     tanker.vin,
+                    tanker.truck_type,
+                    tanker.truck_model,
                     tanker.truck_color,
                     this.getBlockReason(tanker),
                 ].some(value => String(value || '').toLowerCase().includes(query));

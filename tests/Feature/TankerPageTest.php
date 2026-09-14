@@ -47,7 +47,7 @@ it('shows the tanker page and all transfer operation controls', function () {
         ->assertSee("sidebarCollapsed ? 'is-collapsed w-20' : 'w-64'", false)
         ->assertSee('data-tanker-search="1 خاوەنی تاقیکردنەوە 7707654321 TEST-PLATE-1 TEST-VIN-1 MAN 2020 سپی"', false)
         ->assertSee('فرۆشتنی خەت لەگەڵ هەمان بارهەڵگر')
-        ->assertSee('فرۆشتنی خەت تەنها و گۆڕینی بارهەڵگر')
+        ->assertSee('فرۆشتنی خەت و گۆڕینی بارهەڵگر')
         ->assertSee('ژمارەی بەڵگەنامە (No)')
         ->assertSee('گۆڕینی بارهەڵگر - خاوەن وەک خۆی دەمێنێتەوە');
 });

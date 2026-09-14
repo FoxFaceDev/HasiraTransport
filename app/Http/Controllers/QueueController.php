@@ -70,6 +70,7 @@ class QueueController extends Controller
             'مۆبایل',
             'VIN',
             'جۆری بارھەڵگر',
+            'مۆدێلی بارھەڵگر',
             'ڕەنگی بارھەڵگر',
             'دۆخ',
             'بەرواری دیاریکراو',
@@ -89,6 +90,7 @@ class QueueController extends Controller
                 $tanker->sequence_owner_phone,
                 $tanker->vin,
                 $tanker->truck_type,
+                $tanker->truck_model,
                 $tanker->truck_color,
                 $statusLabels[$status] ?? $status,
                 $queue?->scheduled_date
@@ -101,7 +103,7 @@ class QueueController extends Controller
             ];
         }
 
-        $path = XlsxWriter::create('کۆنترۆڵی دەروازە', $rows, [11, 18, 24, 17, 24, 18, 16, 14, 18, 17, 30, 13, 23]);
+        $path = XlsxWriter::create('کۆنترۆڵی دەروازە', $rows, [11, 18, 24, 17, 24, 18, 16, 16, 14, 18, 17, 30, 13, 23]);
         $fileName = 'gatekeeper_'.now('Asia/Baghdad')->format('Y_m_d_H_i_s').'.xlsx';
 
         return response()->download($path, $fileName, [
@@ -143,7 +145,9 @@ class QueueController extends Controller
                         ->orWhere('sequence_owner', 'like', "%{$search}%")
                         ->orWhere('sequence_owner_phone', 'like', "%{$search}%")
                         ->orWhere('plate_number', 'like', "%{$search}%")
-                        ->orWhere('vin', 'like', "%{$search}%");
+                        ->orWhere('vin', 'like', "%{$search}%")
+                        ->orWhere('truck_type', 'like', "%{$search}%")
+                        ->orWhere('truck_model', 'like', "%{$search}%");
                 });
             })
             ->orderByRaw('CAST(sequence_number AS UNSIGNED)')
@@ -166,7 +170,9 @@ class QueueController extends Controller
                         ->orWhere('sequence_owner', 'like', "%{$search}%")
                         ->orWhere('sequence_owner_phone', 'like', "%{$search}%")
                         ->orWhere('plate_number', 'like', "%{$search}%")
-                        ->orWhere('vin', 'like', "%{$search}%");
+                        ->orWhere('vin', 'like', "%{$search}%")
+                        ->orWhere('truck_type', 'like', "%{$search}%")
+                        ->orWhere('truck_model', 'like', "%{$search}%");
                 });
             })
             ->orderByDesc(
@@ -339,6 +345,7 @@ class QueueController extends Controller
                         'plate_number' => $tanker->plate_number,
                         'vin' => $tanker->vin,
                         'truck_type' => $tanker->truck_type,
+                        'truck_model' => $tanker->truck_model,
                         'truck_color' => $tanker->truck_color,
                         'status' => $queue?->status ?? 'pending',
                         'scheduled_date' => $queue?->scheduled_date,
@@ -450,6 +457,7 @@ class QueueController extends Controller
                 'plate_number' => $tanker->plate_number,
                 'vin' => $tanker->vin,
                 'truck_type' => $tanker->truck_type,
+                'truck_model' => $tanker->truck_model,
                 'truck_color' => $tanker->truck_color,
                 'queue' => $tanker->latestQueue ? [
                     'status' => $tanker->latestQueue->status,

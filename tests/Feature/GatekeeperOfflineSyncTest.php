@@ -26,6 +26,7 @@ beforeEach(function () {
         'plate_number' => 'TEST-100',
         'vin' => 'VIN-OFFLINE-1',
         'truck_type' => 'Tanker',
+        'truck_model' => '2020',
         'truck_color' => 'White',
     ]);
 });
@@ -37,6 +38,8 @@ it('returns the complete gatekeeper snapshot', function () {
         ->assertJsonPath('tankers.0.id', $this->tanker->id)
         ->assertJsonPath('tankers.0.blocked_at', null)
         ->assertJsonPath('tankers.0.sequence_owner', 'Owner')
+        ->assertJsonPath('tankers.0.truck_type', 'Tanker')
+        ->assertJsonPath('tankers.0.truck_model', '2020')
         ->assertJsonPath('tankers.0.sequence_owner_phone', '07501112233')
         ->assertJsonMissingPath('tankers.0.driver')
         ->assertJsonPath('tankers.0.queue.status', 'pending');
@@ -284,6 +287,7 @@ it('archives every truck status during reset and filters the history by month', 
         ->and(QueueArchiveItem::query()->count())->toBe(2)
         ->and(QueueArchive::query()->value('report_file'))->toContain('2026_09_12_12_00_00')
         ->and(QueueArchiveItem::query()->where('tanker_id', $this->tanker->id)->value('status'))->toBe('yellow')
+        ->and(QueueArchiveItem::query()->where('tanker_id', $this->tanker->id)->value('truck_model'))->toBe('2020')
         ->and(QueueArchiveItem::query()->where('tanker_id', $pendingTanker->id)->value('status'))->toBe('pending');
 
     $this->actingAs($this->gatekeeper)
@@ -328,15 +332,16 @@ it('includes the current not-yet-reset trucks in status history', function () {
     $this->actingAs($this->gatekeeper)
         ->get(route('gatekeeper.history', ['month' => now('Asia/Baghdad')->format('Y-m'), 'status' => 'green']))
         ->assertOk()
-        ->assertSee('لیستی ئێستا — هێشتا سفر نەکراوەتەوە')
+        ->assertSee('لیستی ئێستا و مێژووی مانگ')
         ->assertSee('TEST-100')
+        ->assertSee('2020')
         ->assertSee('Current live status');
 
     $this->actingAs($this->gatekeeper)
         ->get(route('gatekeeper.history', ['month' => '2025-01', 'status' => 'green']))
         ->assertOk()
         ->assertDontSee('TEST-100')
-        ->assertDontSee('لیستی ئێستا — هێشتا سفر نەکراوەتەوە');
+        ->assertDontSee('لیستی ئێستا و مێژووی مانگ');
 });
 
 it('orders the monthly report numerically by ranking', function () {

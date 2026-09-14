@@ -275,6 +275,7 @@ class TankerTransferDocument
                 .party-content .party-details { width: 70%; }
                 .party-content .party-evidence-cell { width: 30%; }
                 .party-content .detail-table { width: 96%; margin-top: 2mm; }
+                .party-content .detail-value { box-sizing: border-box; padding-left: 5mm; text-align: right; }
                 .party-evidence { width: 22mm; margin: 4mm auto 0; border-collapse: collapse; }
                 .party-evidence .evidence-box { width: 21mm; height: 22mm; padding: 0; border: 0.35mm solid #102c5c; text-align: center; vertical-align: middle; font-size: 8.5pt; line-height: 1.5; }
                 .party-evidence .evidence-gap { height: 5mm; padding: 0; border: 0; }

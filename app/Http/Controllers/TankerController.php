@@ -55,7 +55,7 @@ class TankerController extends Controller
             'plate_number' => 'required|string|unique:tankers,plate_number',
             'vin' => 'nullable|string|max:255',
             'truck_type' => 'required|string|max:255',
-            'truck_model' => 'nullable|string|max:255',
+            'truck_model' => 'required|string|max:255',
             'truck_color' => 'nullable|string|max:255',
         ]);
 
@@ -82,7 +82,7 @@ class TankerController extends Controller
             'plate_number' => 'required|string|unique:tankers,plate_number,'.$tanker->id,
             'vin' => 'nullable|string|max:255',
             'truck_type' => 'required|string|max:255',
-            'truck_model' => 'nullable|string|max:255',
+            'truck_model' => 'required|string|max:255',
             'truck_color' => 'nullable|string|max:255',
         ]);
 

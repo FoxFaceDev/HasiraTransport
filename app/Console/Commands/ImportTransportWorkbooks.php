@@ -17,29 +17,32 @@ class ImportTransportWorkbooks extends Command
     protected $signature = 'transport:import-workbooks
         {drivers=Drivers.xlsx : Path to the drivers workbook}
         {owners=squence owner.xlsx : Path to the sequence owners workbook}
-        {--dry-run : Validate and report without writing to the database}';
+        {--dry-run : Validate and report without writing to the database}
+        {--tankers-only : Import sequence-owner trucks without changing existing drivers}';
 
     protected $description = 'Import drivers and sequence-owner trucks as independent records';
 
     public function handle(): int
     {
-        $driverPath = $this->absolutePath($this->argument('drivers'));
+        $tankersOnly = (bool) $this->option('tankers-only');
         $ownerPath = $this->absolutePath($this->argument('owners'));
 
-        $drivers = $this->parseDrivers($this->readSheet($driverPath, 1));
+        $drivers = $tankersOnly
+            ? []
+            : $this->parseDrivers($this->readSheet($this->absolutePath($this->argument('drivers')), 1));
         $tankers = $this->parseTankers($this->readSheet($ownerPath, 2));
 
         $duplicateOwnerPhones = $this->duplicateSummary(array_column($tankers, 'sequence_owner_phone'));
-        $duplicateDriverPhones = $this->duplicateSummary(array_column($drivers, 'phone'));
         $duplicatePlates = $this->duplicateSummary(array_column($tankers, 'plate_number'), true);
 
-        $this->table(
-            ['Dataset', 'Rows', 'Repeated phone values', 'Rows using repeated phones'],
-            [
-                ['Drivers', count($drivers), $duplicateDriverPhones['values'], $duplicateDriverPhones['rows']],
-                ['Sequence owners / trucks', count($tankers), $duplicateOwnerPhones['values'], $duplicateOwnerPhones['rows']],
-            ]
-        );
+        $summary = [];
+        if (! $tankersOnly) {
+            $duplicateDriverPhones = $this->duplicateSummary(array_column($drivers, 'phone'));
+            $summary[] = ['Drivers', count($drivers), $duplicateDriverPhones['values'], $duplicateDriverPhones['rows']];
+        }
+        $summary[] = ['Sequence owners / trucks', count($tankers), $duplicateOwnerPhones['values'], $duplicateOwnerPhones['rows']];
+
+        $this->table(['Dataset', 'Rows', 'Repeated phone values', 'Rows using repeated phones'], $summary);
 
         if ($duplicatePlates['values'] > 0) {
             $this->error("The truck workbook contains {$duplicatePlates['values']} duplicate plate number(s), affecting {$duplicatePlates['rows']} rows.");
@@ -53,8 +56,10 @@ class ImportTransportWorkbooks extends Command
             return self::SUCCESS;
         }
 
-        if (Driver::query()->exists() || Tanker::query()->exists()) {
-            $this->error('Import stopped because the drivers or tankers table is not empty.');
+        if (Tanker::query()->exists() || (! $tankersOnly && Driver::query()->exists())) {
+            $this->error($tankersOnly
+                ? 'Import stopped because the tankers table is not empty.'
+                : 'Import stopped because the drivers or tankers table is not empty.');
 
             return self::FAILURE;
         }
@@ -88,7 +93,9 @@ class ImportTransportWorkbooks extends Command
             );
         }, 3);
 
-        $this->info('Import completed successfully. Drivers and sequence owners were not linked.');
+        $this->info($tankersOnly
+            ? 'Tanker import completed successfully. Existing drivers were not changed or linked.'
+            : 'Import completed successfully. Drivers and sequence owners were not linked.');
 
         return self::SUCCESS;
     }
@@ -129,8 +136,9 @@ class ImportTransportWorkbooks extends Command
     {
         [$headerIndex, $headers] = $this->findHeader($rows, ['SEQUENCE', 'SEQUENCE OWNER', 'TRUCK PLATE NUM', 'VIN', 'PHONE NUMBER']);
         $columns = array_flip($headers);
-        $truckTypeColumn = $columns['PHONE NUMBER'] + 1;
-        $colourColumn = $columns['COLOUR'] ?? ($truckTypeColumn + 1);
+        $truckTypeColumn = $columns['TYPE'] ?? ($columns['PHONE NUMBER'] + 1);
+        $truckModelColumn = $columns['MODEL'] ?? null;
+        $colourColumn = $columns['COLOUR'] ?? ($truckModelColumn !== null ? $truckModelColumn + 1 : $truckTypeColumn + 1);
         $tankers = [];
 
         foreach (array_slice($rows, $headerIndex + 1) as $offset => $row) {
@@ -140,9 +148,10 @@ class ImportTransportWorkbooks extends Command
             $vin = $this->cell($row, $columns['VIN']);
             $phone = $this->cell($row, $columns['PHONE NUMBER']);
             $truckType = $this->cell($row, $truckTypeColumn);
+            $truckModel = $truckModelColumn !== null ? $this->cell($row, $truckModelColumn) : '';
             $colour = $this->cell($row, $colourColumn);
 
-            if ($sequence === '' && $owner === '' && $plate === '' && $vin === '' && $phone === '' && $truckType === '' && $colour === '') {
+            if ($sequence === '' && $owner === '' && $plate === '' && $vin === '' && $phone === '' && $truckType === '' && $truckModel === '' && $colour === '') {
                 continue;
             }
 
@@ -153,6 +162,10 @@ class ImportTransportWorkbooks extends Command
                 }
             }
 
+            if ($truckModel === '') {
+                [$truckType, $truckModel] = $this->splitTruckTypeAndModel($truckType);
+            }
+
             $tankers[] = [
                 'sequence_number' => $sequence,
                 'sequence_owner' => $owner !== '' ? $owner : null,
@@ -160,11 +173,22 @@ class ImportTransportWorkbooks extends Command
                 'plate_number' => $plate,
                 'vin' => $vin !== '' ? $vin : null,
                 'truck_type' => $truckType,
+                'truck_model' => $truckModel !== '' ? $truckModel : null,
                 'truck_color' => $colour !== '' ? $colour : null,
             ];
         }
 
         return $tankers;
+    }
+
+    /** @return array{string, ?string} */
+    private function splitTruckTypeAndModel(string $combined): array
+    {
+        if (preg_match('/^(.+?)\s+((?:19|20)\d{2})$/u', trim($combined), $matches)) {
+            return [trim($matches[1]), $matches[2]];
+        }
+
+        return [trim($combined), null];
     }
 
     private function readSheet(string $path, int $sheetNumber): array
