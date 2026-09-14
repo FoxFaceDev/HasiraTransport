@@ -40,6 +40,7 @@ it('shows the tanker page and all transfer operation controls', function () {
         ->assertSee('@input.debounce.100ms="filterTankers()"', false)
         ->assertSee('actionsTanker =', false)
         ->assertSee('showActionsModal = true', false)
+        ->assertSee('method="POST" target="_blank" class="space-y-5"', false)
         ->assertSee('کردارەکان')
         ->assertDontSee('دوای تۆمارکردن، بەڵگەنامەی A4 بە هەمان دیزاینی نموونەکە دەکرێتەوە بۆ چاپکردن.')
         ->assertSee("localStorage.getItem('sidebar-collapsed')", false)

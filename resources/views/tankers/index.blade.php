@@ -303,7 +303,7 @@
                 </div>
                 <button type="button" @click="showSaleModal = false" class="text-2xl text-slate-400 hover:text-slate-900">&times;</button>
             </div>
-            <form :action="saleTanker ? '/tankers/' + saleTanker.id + '/sell' : ''" method="POST" class="space-y-5">
+            <form :action="saleTanker ? '/tankers/' + saleTanker.id + '/sell' : ''" method="POST" target="_blank" class="space-y-5">
                 @csrf
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
