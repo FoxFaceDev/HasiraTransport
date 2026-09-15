@@ -84,3 +84,9 @@ composer install --no-dev --optimize-autoloader --no-interaction
 php artisan migrate --force
 php artisan optimize
 ```
+
+The compiled Vite assets in `public/build` are committed to Git because the cPanel
+server does not build Node assets. Before committing frontend changes, run
+`npm ci && npm run build` locally and include the updated `public/build` files in
+the commit. Otherwise PHP and Blade changes may deploy while JavaScript and CSS
+remain on an older version.
