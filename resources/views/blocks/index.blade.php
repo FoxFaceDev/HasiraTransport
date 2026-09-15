@@ -92,6 +92,8 @@
         <table class="w-full text-right border-collapse">
             <thead><tr class="border-b border-white/10 text-gray-400">
                 <th class="py-3 px-4 font-normal">ژمارەی تابلۆ</th>
+                <th class="py-3 px-4 font-normal">خاوەنی خەت</th>
+                <th class="py-3 px-4 font-normal">مۆبایل</th>
                 <th class="py-3 px-4 font-normal">زانیاری</th>
                 <th class="py-3 px-4 font-normal">کاتی بلۆککردن</th>
                 <th class="py-3 px-4 font-normal">کردارەکان</th>
@@ -100,6 +102,8 @@
                 @foreach($tankers as $tanker)
                 <tr data-block-search="{{ $tanker->sequence_number }} {{ $tanker->sequence_owner }} {{ $tanker->sequence_owner_phone }} {{ $tanker->plate_number }} {{ $tanker->vin }} {{ $tanker->truck_type }} {{ $tanker->truck_model }} {{ $tanker->truck_color }} {{ $tanker->driver?->name }}" class="border-b border-white/5 transition-colors hover:bg-white/5">
                     <td class="py-3 px-4 font-medium">{{ $tanker->plate_number }}</td>
+                    <td class="py-3 px-4">{{ $tanker->sequence_owner ?: '-' }}</td>
+                    <td class="whitespace-nowrap py-3 px-4">{{ $tanker->sequence_owner_phone ?: '-' }}</td>
                     <td class="py-3 px-4 text-slate-600">ڕیزبەندی: {{ $tanker->sequence_number ?: '-' }} · {{ $tanker->truck_type ?: '-' }} · مۆدێل: {{ $tanker->truck_model ?: '-' }} · {{ $tanker->driver?->name ?: 'بێ شۆفێر' }}</td>
                     <td class="py-3 px-4 text-slate-500">{{ $tanker->blocked_at?->format('Y-m-d H:i') }}</td>
                     <td class="py-3 px-4">
@@ -114,9 +118,9 @@
                 </tr>
                 @endforeach
                 @if($tankers->isEmpty())
-                <tr><td colspan="4" class="py-10 text-center text-slate-500">هیچ خەتێکی بلۆککراو نییە.</td></tr>
+                <tr><td colspan="6" class="py-10 text-center text-slate-500">هیچ خەتێکی بلۆککراو نییە.</td></tr>
                 @else
-                <tr x-cloak x-show="!hasTankerResults"><td colspan="4" class="py-10 text-center text-slate-500">هیچ خەتێک نەدۆزرایەوە.</td></tr>
+                <tr x-cloak x-show="!hasTankerResults"><td colspan="6" class="py-10 text-center text-slate-500">هیچ خەتێک نەدۆزرایەوە.</td></tr>
                 @endif
             </tbody>
         </table>

@@ -14,9 +14,8 @@
                 <input type="date" x-model="selectedDate" @change="changeScheduleDate($event.target.value)" class="glass-input w-full rounded-lg px-4 py-2 md:w-52">
             </label>
         </div>
-        <div class="flex flex-col justify-between gap-4 border-t border-slate-200 pt-4 xl:flex-row xl:items-center">
+        <div class="border-t border-slate-200 pt-4">
             <input type="search" x-model="search" @input.debounce.100ms="search = $event.target.value" placeholder="گەڕان بەدوای بارهەڵگر، خاوەنی خەت، مۆبایل، VIN..." dir="rtl" autocomplete="off" class="glass-input w-full rounded-lg px-4 py-2 text-right text-sm xl:w-72">
-            <div class="min-w-0">@include('gatekeeper.partials.sync-status')</div>
         </div>
     </div>
     @include('gatekeeper.partials.schedule-table')

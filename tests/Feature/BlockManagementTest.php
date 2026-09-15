@@ -21,6 +21,7 @@ beforeEach(function () {
     $this->tanker = Tanker::query()->create([
         'sequence_number' => '17',
         'sequence_owner' => 'Owner',
+        'sequence_owner_phone' => '07501234567',
         'plate_number' => 'BLOCK-17',
         'truck_type' => 'MAN',
         'driver_id' => $this->driver->id,
@@ -80,7 +81,13 @@ it('keeps blocked tankers visible in the gatekeeper snapshot and original page',
         ->assertJsonPath('tankers.0.plate_number', 'BLOCK-17')
         ->assertJsonPath('tankers.0.blocked_at', fn ($value) => filled($value));
 
-    $this->get(route('blocks.index'))->assertSee('BLOCK-17');
+    $this->get(route('blocks.index'))
+        ->assertOk()
+        ->assertSee('BLOCK-17')
+        ->assertSee('خاوەنی خەت')
+        ->assertSee('Owner')
+        ->assertSee('مۆبایل')
+        ->assertSee('07501234567');
 });
 
 it('keeps driver blocks independent from tanker and gatekeeper pages', function () {

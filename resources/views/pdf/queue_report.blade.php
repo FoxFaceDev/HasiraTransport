@@ -119,6 +119,7 @@
         .status-green { color: #047857; font-weight: bold; }
         .status-yellow { color: #b45309; font-weight: bold; }
         .status-red { color: #be123c; font-weight: bold; }
+        .status-departed { color: #0369a1; font-weight: bold; }
         .status-pending { color: #64748b; font-weight: bold; }
 
         .empty-state {
@@ -211,7 +212,7 @@
             @forelse($tankers as $tanker)
             @php($queue = $tanker->latestQueue)
             @php($status = $queue?->status ?? 'pending')
-            @php($statusLabels = ['pending' => 'چاوەڕوان', 'green' => 'هاتووە', 'yellow' => 'دواخراو', 'red' => 'نەهاتووە'])
+            @php($statusLabels = ['pending' => 'چاوەڕوان', 'green' => 'هاتووە', 'yellow' => 'دواخراو', 'red' => 'نەهاتووە', 'departed' => 'ڕۆیشتووە'])
             <tr>
                 <td class="center">{{ $tanker->sequence_number ?: '-' }}</td>
                 <td class="center">{{ $tanker->plate_number ?: '-' }}</td>

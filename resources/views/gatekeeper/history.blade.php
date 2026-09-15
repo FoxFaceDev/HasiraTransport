@@ -2,9 +2,8 @@
 
 @section('content')
 @php
-    $statusLabels = ['green' => 'هاتووە', 'yellow' => 'دواخراوە', 'red' => 'نەهاتووە', 'pending' => 'دیاری نەکراوە'];
-    $statusClasses = ['green' => 'bg-emerald-100 text-emerald-700', 'yellow' => 'bg-amber-100 text-amber-700', 'red' => 'bg-rose-100 text-rose-700', 'pending' => 'bg-slate-100 text-slate-600'];
-    $showCurrent = $month === now('Asia/Baghdad')->format('Y-m');
+    $statusLabels = ['green' => 'هاتووە', 'yellow' => 'دواخراوە', 'red' => 'نەهاتووە', 'departed' => 'ڕۆیشتووە', 'pending' => 'دیاری نەکراوە'];
+    $statusClasses = ['green' => 'bg-emerald-100 text-emerald-700', 'yellow' => 'bg-amber-100 text-amber-700', 'red' => 'bg-rose-100 text-rose-700', 'departed' => 'bg-sky-100 text-sky-700', 'pending' => 'bg-slate-100 text-slate-600'];
 @endphp
 <div class="space-y-5">
     <div class="glass-panel p-6">
@@ -14,8 +13,9 @@
             <p class="mt-1 text-slate-500">لیستی ئێستا و تۆمارە ئەرشیفکراوەکان لە یەک خشتەدا پیشان دەدرێن.</p>
         </div>
 
-        <form method="GET" action="{{ route('gatekeeper.history') }}" class="grid grid-cols-1 items-end gap-4 md:grid-cols-4">
-            <label><span class="form-label mb-1 block">مانگ هەڵبژێرە</span><input type="month" name="month" value="{{ $month }}" required class="glass-input w-full rounded-lg px-4 py-2"></label>
+        <form method="GET" action="{{ route('gatekeeper.history') }}" class="grid grid-cols-1 items-end gap-4 md:grid-cols-5">
+            <label><span class="form-label mb-1 block">لە بەرواری</span><input type="date" name="from_date" value="{{ $fromDate }}" required class="glass-input w-full rounded-lg px-4 py-2"></label>
+            <label><span class="form-label mb-1 block">تا بەرواری</span><input type="date" name="to_date" value="{{ $toDate }}" required class="glass-input w-full rounded-lg px-4 py-2"></label>
             <label>
                 <span class="form-label mb-1 block">دۆخ</span>
                 <select name="status" class="glass-input w-full rounded-lg px-4 py-2">
@@ -23,6 +23,7 @@
                     <option value="green" @selected(request('status') === 'green')>هاتووە</option>
                     <option value="yellow" @selected(request('status') === 'yellow')>دواخراوە</option>
                     <option value="red" @selected(request('status') === 'red')>نەهاتووە</option>
+                    <option value="departed" @selected(request('status') === 'departed')>ڕۆیشتووە</option>
                     <option value="pending" @selected(request('status') === 'pending')>دیاری نەکراوە</option>
                 </select>
             </label>
@@ -34,11 +35,11 @@
     <div class="space-y-3">
         <div class="flex items-center justify-between px-1">
             <div>
-                <h3 class="text-lg font-bold text-slate-900">{{ $showCurrent ? 'لیستی ئێستا و مێژووی مانگ' : 'مێژووی مانگ' }}</h3>
-                <p class="text-sm text-slate-500">تۆمارەکانی مانگی {{ $month }}</p>
+                <h3 class="text-lg font-bold text-slate-900">{{ $showCurrent ? 'لیستی ئێستا و مێژووی ماوە' : 'مێژووی ماوە' }}</h3>
+                <p class="text-sm text-slate-500">تۆمارەکان لە {{ $fromDate }} تا {{ $toDate }}</p>
             </div>
             <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
-                {{ ($showCurrent ? $currentTankers->count() : 0) + $items->count() }} خەت
+                {{ ($showCurrent ? $currentTankers->count() : 0) + $items->total() }} خەت
             </span>
         </div>
 

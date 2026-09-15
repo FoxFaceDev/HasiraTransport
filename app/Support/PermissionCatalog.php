@@ -29,6 +29,8 @@ class PermissionCatalog
                 'view gatekeeper' => 'بینینی کۆنترۆڵی دەروازە',
                 'update queue status' => 'گۆڕینی دۆخی تەنکەر',
                 'update queue notes' => 'نووسین و گۆڕینی تێبینی',
+                'update gatekeeper phone' => 'گۆڕینی ژمارەی مۆبایل لە کۆنترۆڵی دەروازە',
+                'block tankers from gatekeeper' => 'بلۆککردن و لابردنی بلۆکی خەت لە کۆنترۆڵی دەروازە',
                 'reset queue' => 'سفرکردنەوەی لیست',
             ],
             'ڕاپۆرتەکان' => [

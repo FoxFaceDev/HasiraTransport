@@ -23,8 +23,7 @@
                     <td class="py-3 px-4 font-bold" x-text="getStatusLabel(tanker)"></td>
                 </tr>
             </template>
-            <tr x-show="!ready"><td colspan="7" class="py-10 text-center text-slate-500">داتای ئۆفلاین ئامادە دەکرێت...</td></tr>
-            <tr x-cloak x-show="ready && visibleTankers.length === 0"><td colspan="7" class="py-10 text-center text-slate-500">هیچ خەتێک بۆ ئەم بەروارە دیاری نەکراوە.</td></tr>
+            <tr x-cloak x-show="visibleTankers.length === 0"><td colspan="7" class="py-10 text-center text-slate-500">هیچ خەتێک بۆ ئەم بەروارە دیاری نەکراوە.</td></tr>
         </tbody>
     </table>
 </div>

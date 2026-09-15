@@ -84,6 +84,9 @@ class AuditLog extends Model
             'gatekeeper.filter' => 'لیستی دۆخی «'.$this->statusName($this->subject_label).'»ی بینی',
             'gatekeeper.update-status' => 'دۆخی خەتێکی گۆڕی بۆ «'.$this->statusName(data_get($this->request_data, 'status')).'»'.$target,
             'gatekeeper.update-note' => 'تێبینی خەتێکی نوێ کردەوە'.$target,
+            'gatekeeper.update-phone' => 'ژمارەی مۆبایلی خەتێکی نوێ کردەوە'.$target,
+            'gatekeeper.block-tanker' => 'خەتێکی لە کۆنترۆڵی دەروازە بلۆک کرد'.$target,
+            'gatekeeper.unblock-tanker' => 'بلۆکی خەتێکی لە کۆنترۆڵی دەروازە لابرد'.$target,
             'gatekeeper.sync.snapshot' => 'داتای کۆنترۆڵی دەروازەی نوێ کردەوە',
             'gatekeeper.sync.push' => 'گۆڕانکارییە ئۆفلاینەکانی هاوکات کردەوە',
             'gatekeeper.reset' => 'لیستی دەروازەی سفر کردەوە و ڕاپۆرتی دروست کرد',
@@ -239,6 +242,7 @@ class AuditLog extends Model
             'green' => 'هاتووە',
             'yellow' => 'دواخراوە',
             'red' => 'نەهاتووە',
+            'departed' => 'ڕۆیشتووە',
             'pending' => 'چاوەڕوانە',
             default => $status ?: 'نادیار',
         };

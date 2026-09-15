@@ -1,25 +1,38 @@
 import './bootstrap';
 
 import Alpine from 'alpinejs';
-import { gatekeeperQueueManager } from './gatekeeper-offline';
+import { gatekeeperQueueManager } from './gatekeeper';
 
 window.Alpine = Alpine;
 window.gatekeeperQueueManager = gatekeeperQueueManager;
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(error => {
-            console.error('Service worker registration failed:', error);
-        });
+        navigator.serviceWorker.getRegistrations()
+            .then(registrations => Promise.all(
+                registrations
+                    .filter(registration => {
+                        const worker = registration.active || registration.waiting || registration.installing;
+                        return worker && new URL(worker.scriptURL).pathname === '/sw.js';
+                    })
+                    .map(registration => registration.unregister())
+            ))
+            .catch(error => console.error('Could not remove the old service worker:', error));
     });
 }
 
-document.addEventListener('submit', event => {
-    const form = event.target;
-    if (form instanceof HTMLFormElement && form.action.endsWith('/logout')) {
-        navigator.serviceWorker?.controller?.postMessage({ type: 'CLEAR_PRIVATE_CACHE' });
-    }
-});
+if ('caches' in window) {
+    caches.keys()
+        .then(keys => Promise.all(keys.filter(key => key.startsWith('hasira-')).map(key => caches.delete(key))))
+        .catch(error => console.error('Could not remove the old offline cache:', error));
+}
+
+if ('indexedDB' in window) {
+    indexedDB.deleteDatabase('hasira-gatekeeper');
+}
+
+localStorage.removeItem('pendingSyncs');
+localStorage.removeItem('queueStatuses');
 
 function enableScrollableTable(tableWrapper) {
     const table = Array.from(tableWrapper.children).find(child => child instanceof HTMLTableElement);

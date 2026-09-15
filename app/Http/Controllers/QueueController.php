@@ -26,16 +26,20 @@ class QueueController extends Controller
         return view('gatekeeper.index', compact('snapshot'));
     }
 
-    public function filter($status)
+    public function filter(Request $request, $status)
     {
-        $validStatuses = ['green', 'red', 'yellow'];
+        $validStatuses = ['green', 'red', 'yellow', 'departed'];
         if (! in_array($status, $validStatuses)) {
             abort(404);
         }
 
+        $validated = $request->validate([
+            'date' => ['nullable', 'date_format:Y-m-d'],
+        ]);
+        $date = $validated['date'] ?? null;
         $snapshot = $this->snapshot();
 
-        return view('gatekeeper.filter', compact('snapshot', 'status'));
+        return view('gatekeeper.filter', compact('snapshot', 'status', 'date'));
     }
 
     public function schedule(Request $request)
@@ -56,6 +60,7 @@ class QueueController extends Controller
             'green' => 'هاتووە',
             'yellow' => 'دواخراو',
             'red' => 'نەهاتووە',
+            'departed' => 'ڕۆیشتووە',
         ];
         $tankers = Tanker::query()
             ->with('latestQueue')
@@ -115,15 +120,34 @@ class QueueController extends Controller
     public function history(Request $request)
     {
         $validated = $request->validate([
+            'from_date' => ['nullable', 'date_format:Y-m-d'],
+            'to_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from_date'],
             'month' => ['nullable', 'date_format:Y-m'],
-            'status' => ['nullable', 'in:pending,green,yellow,red'],
+            'status' => ['nullable', 'in:pending,green,yellow,red,departed'],
             'search' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $month = $validated['month'] ?? now('Asia/Baghdad')->format('Y-m');
-        $selectedMonth = Carbon::createFromFormat('Y-m', $month, 'Asia/Baghdad')->startOfMonth();
-        $fromUtc = $selectedMonth->copy()->startOfMonth()->utc();
-        $toUtc = $selectedMonth->copy()->endOfMonth()->utc();
+        $today = now('Asia/Baghdad');
+        $legacyMonth = isset($validated['month'])
+            ? Carbon::createFromFormat('!Y-m', $validated['month'], 'Asia/Baghdad')
+            : null;
+        $fromDate = $validated['from_date']
+            ?? $legacyMonth?->copy()->startOfMonth()->toDateString()
+            ?? $today->copy()->startOfMonth()->toDateString();
+        $toDate = $validated['to_date']
+            ?? $legacyMonth?->copy()->endOfMonth()->toDateString()
+            ?? $today->toDateString();
+        if ($toDate < $fromDate) {
+            throw ValidationException::withMessages([
+                'to_date' => 'بەرواری کۆتایی نابێت پێش بەرواری دەستپێک بێت.',
+            ]);
+        }
+        $fromUtc = Carbon::createFromFormat('!Y-m-d', $fromDate, 'Asia/Baghdad')->startOfDay()->utc();
+        $toUtc = Carbon::createFromFormat('!Y-m-d', $toDate, 'Asia/Baghdad')->endOfDay()->utc();
+        $showCurrent = $today->betweenIncluded(
+            Carbon::createFromFormat('!Y-m-d', $fromDate, 'Asia/Baghdad')->startOfDay(),
+            Carbon::createFromFormat('!Y-m-d', $toDate, 'Asia/Baghdad')->endOfDay(),
+        );
 
         $currentTankersQuery = Tanker::query()
             ->with('latestQueue')
@@ -153,16 +177,17 @@ class QueueController extends Controller
             ->orderByRaw('CAST(sequence_number AS UNSIGNED)')
             ->orderBy('sequence_number');
 
-        $currentTankers = $month === now('Asia/Baghdad')->format('Y-m')
+        $currentTankers = $showCurrent
             ? $currentTankersQuery->get()
             : collect();
 
+        $archiveIds = QueueArchive::query()
+            ->whereBetween('reset_at', [$fromUtc, $toUtc])
+            ->pluck('id');
+
         $items = QueueArchiveItem::query()
             ->with('archive.resetter')
-            ->whereHas('archive', fn ($query) => $query->whereBetween('reset_at', [
-                $fromUtc,
-                $toUtc,
-            ]))
+            ->whereIn('queue_archive_id', $archiveIds)
             ->when($validated['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($validated['search'] ?? null, function ($query, $search) {
                 $query->where(function ($query) use ($search) {
@@ -186,13 +211,13 @@ class QueueController extends Controller
             ->paginate(100)
             ->withQueryString();
 
-        return view('gatekeeper.history', compact('items', 'currentTankers', 'month'));
+        return view('gatekeeper.history', compact('items', 'currentTankers', 'fromDate', 'toDate', 'showCurrent'));
     }
 
     public function updateStatus(Request $request, Tanker $tanker)
     {
-        $request->validate([
-            'status' => 'required|in:green,red,yellow,pending',
+        $validated = $request->validate([
+            'status' => 'required|in:green,red,yellow,departed,pending',
             'scheduled_date' => 'nullable|date',
             'scheduled_time' => 'nullable|string',
             'note' => 'nullable|string',
@@ -200,23 +225,37 @@ class QueueController extends Controller
 
         $dataToUpdate = [
             'driver_id' => null,
-            'status' => $request->status,
+            'status' => $validated['status'],
             'gatekeeper_id' => auth()->id(),
         ];
 
-        if ($request->has('scheduled_date')) {
-            $dataToUpdate['scheduled_date'] = $request->scheduled_date;
-        }
-        if ($request->has('scheduled_time')) {
-            $dataToUpdate['scheduled_time'] = $request->scheduled_time;
+        if ($validated['status'] === 'departed') {
+            $departedAt = now('Asia/Baghdad');
+            $dataToUpdate['scheduled_date'] = $departedAt->toDateString();
+            $dataToUpdate['scheduled_time'] = $departedAt->format('H:i');
+        } elseif ($validated['status'] === 'red') {
+            $dataToUpdate['scheduled_date'] = null;
+            $dataToUpdate['scheduled_time'] = null;
+        } else {
+            if ($request->has('scheduled_date')) {
+                $dataToUpdate['scheduled_date'] = $request->scheduled_date;
+            }
+            if ($request->has('scheduled_time')) {
+                $dataToUpdate['scheduled_time'] = $request->scheduled_time;
+            }
         }
 
-        Queue::updateOrCreate(
+        $queue = Queue::updateOrCreate(
             ['tanker_id' => $tanker->id],
             $dataToUpdate
         );
 
-        return response()->json(['success' => true, 'status' => $request->status]);
+        return response()->json([
+            'success' => true,
+            'status' => $queue->status,
+            'scheduled_date' => $queue->scheduled_date,
+            'scheduled_time' => $queue->scheduled_time,
+        ]);
     }
 
     public function updateNote(Request $request, Tanker $tanker)
@@ -237,6 +276,34 @@ class QueueController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function updatePhone(Request $request, Tanker $tanker)
+    {
+        $validated = $request->validate([
+            'sequence_owner_phone' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $phone = filled($validated['sequence_owner_phone'] ?? null)
+            ? trim($validated['sequence_owner_phone'])
+            : null;
+        $tanker->update(['sequence_owner_phone' => $phone]);
+
+        return response()->json(['success' => true, 'sequence_owner_phone' => $phone]);
+    }
+
+    public function blockTanker(Tanker $tanker)
+    {
+        $tanker->update(['blocked_at' => now()]);
+
+        return response()->json(['success' => true, 'blocked_at' => $tanker->blocked_at?->toIso8601String()]);
+    }
+
+    public function unblockTanker(Tanker $tanker)
+    {
+        $tanker->update(['blocked_at' => null]);
+
+        return response()->json(['success' => true, 'blocked_at' => null]);
+    }
+
     public function syncSnapshot()
     {
         return response()->json($this->snapshot());
@@ -250,7 +317,7 @@ class QueueController extends Controller
             'operations.*.type' => 'required|in:status,note',
             'operations.*.tanker_id' => 'required|integer|exists:tankers,id',
             'operations.*.payload' => 'required|array',
-            'operations.*.payload.status' => 'nullable|in:green,red,yellow,pending',
+            'operations.*.payload.status' => 'nullable|in:green,red,yellow,departed,pending',
             'operations.*.payload.scheduled_date' => 'nullable|date',
             'operations.*.payload.scheduled_time' => 'nullable|string|max:255',
             'operations.*.payload.note' => 'nullable|string',
@@ -417,12 +484,21 @@ class QueueController extends Controller
             'gatekeeper_id' => $gatekeeperId,
         ];
 
-        if (array_key_exists('scheduled_date', $payload)) {
-            $data['scheduled_date'] = $payload['scheduled_date'];
-        }
+        if ($payload['status'] === 'departed') {
+            $departedAt = now('Asia/Baghdad');
+            $data['scheduled_date'] = $departedAt->toDateString();
+            $data['scheduled_time'] = $departedAt->format('H:i');
+        } elseif ($payload['status'] === 'red') {
+            $data['scheduled_date'] = null;
+            $data['scheduled_time'] = null;
+        } else {
+            if (array_key_exists('scheduled_date', $payload)) {
+                $data['scheduled_date'] = $payload['scheduled_date'];
+            }
 
-        if (array_key_exists('scheduled_time', $payload)) {
-            $data['scheduled_time'] = $payload['scheduled_time'];
+            if (array_key_exists('scheduled_time', $payload)) {
+                $data['scheduled_time'] = $payload['scheduled_time'];
+            }
         }
 
         Queue::updateOrCreate(['tanker_id' => $tanker->id], $data);

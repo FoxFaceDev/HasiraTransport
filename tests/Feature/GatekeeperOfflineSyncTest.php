@@ -90,10 +90,20 @@ it('embeds the initial truck snapshot in the gatekeeper page', function () {
         ->assertSee('مۆبایل')
         ->assertDontSee('ناوی شۆفێر')
         ->assertDontSee('شەهادە')
-        ->assertSee('getBlockReason(tanker)', false)
+        ->assertSee('isBlocked(actionsTanker)', false)
         ->assertSee('blocked-badge', false)
         ->assertDontSee('<th class="py-3 px-4 font-normal">#</th>', false)
         ->assertDontSee('x-text="index + 1"', false);
+});
+
+it('does not advertise or render offline queue controls', function () {
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.index'))
+        ->assertOk()
+        ->assertSee('گۆڕانکارییەکان ڕاستەوخۆ لە سێرڤەر هەڵدەگیرێن.')
+        ->assertDontSee('گۆڕانکاری چاوەڕێی هاوکاتکردنەوەیە')
+        ->assertDontSee('@click="syncNow()"', false)
+        ->assertDontSee('داتای ئۆفلاین ئامادە دەکرێت...');
 });
 
 it('uses the ranking label throughout the gatekeeper tables and monthly PDF', function () {
@@ -123,13 +133,17 @@ it('uses the ranking label throughout the gatekeeper tables and monthly PDF', fu
         ->not->toContain('زنجیرە');
 });
 
-it('reverts a status by clicking its selected action again without showing another button', function () {
+it('opens gatekeeper actions in one modal and reverts a selected status from it', function () {
     $this->actingAs($this->gatekeeper)
         ->get(route('gatekeeper.index'))
         ->assertOk()
-        ->assertSee("getStatus(tanker) === 'green' ? revertStatus(tanker.id)", false)
-        ->assertSee("getStatus(tanker) === 'yellow' ? revertStatus(tanker.id)", false)
-        ->assertSee("getStatus(tanker) === 'red' ? revertStatus(tanker.id)", false)
+        ->assertSee('@click="openActionsModal(tanker)"', false)
+        ->assertSee('x-show="showActionsModal"', false)
+        ->assertSee("getStatus(actionsTanker) === 'green' ? revertStatus(actionsTanker.id)", false)
+        ->assertSee("getStatus(actionsTanker) === 'yellow' ? revertStatus(actionsTanker.id)", false)
+        ->assertSee("getStatus(actionsTanker) === 'red' ? revertStatus(actionsTanker.id)", false)
+        ->assertSee("getStatus(actionsTanker) === 'departed' ? revertStatus(actionsTanker.id) : updateStatus(actionsTanker.id, 'departed')", false)
+        ->assertDontSee("openScheduleModal(actionsTanker.id, 'departed')", false)
         ->assertDontSee('>گەڕاندنەوە</button>', false);
 });
 
@@ -159,7 +173,110 @@ it('renders realtime search on every status page', function (string $status) {
         ->assertSee('type="search"', false)
         ->assertSee('@input.debounce.100ms="search = $event.target.value"', false)
         ->assertSee('autocomplete="off"', false);
-})->with(['green', 'yellow', 'red']);
+})->with(['green', 'yellow', 'red', 'departed']);
+
+it('filters dated statuses and renders the departed page', function () {
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.filter', ['status' => 'green', 'date' => '2026-09-15']))
+        ->assertOk()
+        ->assertSee("filterDate: '2026-09-15'", false)
+        ->assertSee('فلتەر بە پێی بەروار');
+
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.filter', ['status' => 'departed', 'date' => '2026-09-16']))
+        ->assertOk()
+        ->assertSee('لیستی ڕۆیشتووەکان')
+        ->assertSee("statusFilter: 'departed'", false);
+});
+
+it('saves the departed status with its date', function () {
+    $this->travelTo(\Carbon\Carbon::parse('2026-09-15 16:42:00', 'Asia/Baghdad'));
+
+    $this->actingAs($this->gatekeeper)
+        ->postJson(route('gatekeeper.update-status', $this->tanker), [
+            'status' => 'departed',
+        ])
+        ->assertOk()
+        ->assertJsonPath('status', 'departed')
+        ->assertJsonPath('scheduled_date', '2026-09-15')
+        ->assertJsonPath('scheduled_time', '16:42');
+
+    expect($this->tanker->fresh()->latestQueue->status)->toBe('departed')
+        ->and($this->tanker->fresh()->latestQueue->scheduled_date)->toBe('2026-09-15')
+        ->and($this->tanker->fresh()->latestQueue->scheduled_time)->toBe('16:42');
+});
+
+it('clears an existing date and time when marking a tanker as not arrived', function () {
+    Queue::create([
+        'tanker_id' => $this->tanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'yellow',
+        'scheduled_date' => '2026-09-18',
+        'scheduled_time' => '5:30 بەیانی',
+    ]);
+
+    $this->actingAs($this->gatekeeper)
+        ->postJson(route('gatekeeper.update-status', $this->tanker), ['status' => 'red'])
+        ->assertOk()
+        ->assertJsonPath('status', 'red')
+        ->assertJsonPath('scheduled_date', null)
+        ->assertJsonPath('scheduled_time', null);
+
+    $queue = $this->tanker->fresh()->latestQueue;
+
+    expect($queue->status)->toBe('red')
+        ->and($queue->scheduled_date)->toBeNull()
+        ->and($queue->scheduled_time)->toBeNull();
+});
+
+it('lets only permitted users update a phone from the gatekeeper page', function () {
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.index'))
+        ->assertOk()
+        ->assertSee('@contextmenu.prevent="editPhone(tanker)"', false);
+
+    $this->patchJson(route('gatekeeper.update-phone', $this->tanker), [
+        'sequence_owner_phone' => '07509998877',
+    ])->assertOk()->assertJsonPath('sequence_owner_phone', '07509998877');
+
+    expect($this->tanker->fresh()->sequence_owner_phone)->toBe('07509998877');
+
+    $viewer = User::factory()->create();
+    $viewer->givePermissionTo('view gatekeeper');
+
+    $this->actingAs($viewer)
+        ->get(route('gatekeeper.index'))
+        ->assertOk()
+        ->assertDontSee('@contextmenu.prevent="editPhone(tanker)"', false);
+
+    $this->actingAs($viewer)
+        ->patchJson(route('gatekeeper.update-phone', $this->tanker), ['sequence_owner_phone' => '000'])
+        ->assertForbidden();
+});
+
+it('rejects a reversed history date range', function () {
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.history', [
+            'from_date' => '2026-09-20',
+            'to_date' => '2026-09-10',
+        ]))
+        ->assertSessionHasErrors('to_date');
+});
+
+it('lets a permitted gatekeeper block and unblock a tanker', function () {
+    $this->actingAs($this->gatekeeper)
+        ->patchJson(route('gatekeeper.block-tanker', $this->tanker))
+        ->assertOk()
+        ->assertJsonPath('blocked_at', fn ($value) => filled($value));
+
+    expect($this->tanker->fresh()->blocked_at)->not->toBeNull();
+
+    $this->deleteJson(route('gatekeeper.unblock-tanker', $this->tanker))
+        ->assertOk()
+        ->assertJsonPath('blocked_at', null);
+
+    expect($this->tanker->fresh()->blocked_at)->toBeNull();
+});
 
 it('applies queued operations exactly once', function () {
     $statusUuid = (string) Str::uuid();
@@ -330,9 +447,9 @@ it('includes the current not-yet-reset trucks in status history', function () {
     expect(QueueArchive::query()->count())->toBe(0);
 
     $this->actingAs($this->gatekeeper)
-        ->get(route('gatekeeper.history', ['month' => now('Asia/Baghdad')->format('Y-m'), 'status' => 'green']))
+        ->get(route('gatekeeper.history', ['from_date' => now('Asia/Baghdad')->startOfMonth()->toDateString(), 'to_date' => now('Asia/Baghdad')->toDateString(), 'status' => 'green']))
         ->assertOk()
-        ->assertSee('لیستی ئێستا و مێژووی مانگ')
+        ->assertSee('لیستی ئێستا و مێژووی ماوە')
         ->assertSee('TEST-100')
         ->assertSee('2020')
         ->assertSee('Current live status');
@@ -342,6 +459,39 @@ it('includes the current not-yet-reset trucks in status history', function () {
         ->assertOk()
         ->assertDontSee('TEST-100')
         ->assertDontSee('لیستی ئێستا و مێژووی مانگ');
+});
+
+it('shows every reset archive inside a date range', function () {
+    Storage::fake('public');
+
+    foreach ([
+        ['2026-09-03 09:00:00', 'First reset'],
+        ['2026-09-20 14:00:00', 'Second reset'],
+    ] as [$resetAt, $note]) {
+        $this->travelTo(\Carbon\Carbon::parse($resetAt, 'Asia/Baghdad'));
+        Queue::updateOrCreate(['tanker_id' => $this->tanker->id], [
+            'gatekeeper_id' => $this->gatekeeper->id,
+            'status' => 'green',
+            'note' => $note,
+        ]);
+
+        $this->actingAs($this->gatekeeper)
+            ->post(route('gatekeeper.reset'))
+            ->assertOk();
+    }
+
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.history', [
+            'from_date' => '2026-09-01',
+            'to_date' => '2026-09-30',
+        ]))
+        ->assertOk()
+        ->assertSee('First reset')
+        ->assertSee('Second reset')
+        ->assertSee('لە 2026-09-01 تا 2026-09-30');
+
+    expect(QueueArchive::count())->toBe(2)
+        ->and(QueueArchiveItem::where('tanker_id', $this->tanker->id)->count())->toBe(2);
 });
 
 it('orders the monthly report numerically by ranking', function () {

@@ -114,6 +114,10 @@
                 <span class="w-2.5 h-2.5 rounded-full bg-rose-500 ml-4 ring-4 ring-rose-50"></span>
                 <span>نەهاتووەکان</span>
             </a>
+            <a href="{{ route('gatekeeper.filter', 'departed') }}" title="ڕۆیشتووەکان" class="nav-link is-departed {{ request()->is('*departed') ? 'is-active' : '' }}">
+                <span class="w-2.5 h-2.5 rounded-full bg-sky-500 ml-4 ring-4 ring-sky-50"></span>
+                <span>ڕۆیشتووەکان</span>
+            </a>
             @endcan
 
             @if(auth()->user()->can('view drivers') || auth()->user()->can('view tankers') || auth()->user()->can('view gatekeeper'))

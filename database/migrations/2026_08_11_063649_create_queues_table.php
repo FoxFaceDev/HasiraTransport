@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('tanker_id')->constrained()->onDelete('cascade');
             $table->foreignId('driver_id')->nullable()->constrained()->onDelete('cascade');
-            $table->string('status')->default('pending'); // pending, green, red, yellow
+            $table->string('status')->default('pending'); // pending, green, red, yellow, departed
             $table->foreignId('gatekeeper_id')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
         });

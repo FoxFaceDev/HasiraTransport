@@ -151,6 +151,10 @@
         color: #be123c;
     }
 
+    .nav-link.is-departed {
+        color: #0369a1;
+    }
+
     .app-topbar {
         background: rgba(248, 250, 252, 0.94);
         border: 1px solid #cbd6e4;
@@ -383,6 +387,20 @@
 
     .glass-panel table tbody tr.queue-row-red:hover > td {
         background-color: #ffcdd5 !important;
+    }
+
+    .glass-panel table tbody tr.queue-row-departed > td {
+        background-color: #e0f2fe !important;
+        border-top: 1px solid #7dd3fc;
+        border-bottom: 1px solid #7dd3fc;
+    }
+
+    .glass-panel table tbody tr.queue-row-departed > td:first-child {
+        border-right: 5px solid #0284c7;
+    }
+
+    .glass-panel table tbody tr.queue-row-departed:hover > td {
+        background-color: #bae6fd !important;
     }
 
     .glass-panel table tbody tr.blocked-row > td {

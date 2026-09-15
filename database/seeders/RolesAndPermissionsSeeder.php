@@ -26,7 +26,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view tankers', 'create tankers', 'edit tankers', 'delete tankers',
         ]);
         $gatekeeper->syncPermissions([
-            'view gatekeeper', 'update queue status', 'update queue notes', 'reset queue',
+            'view gatekeeper', 'update queue status', 'update queue notes',
+            'update gatekeeper phone', 'block tankers from gatekeeper', 'reset queue',
         ]);
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();

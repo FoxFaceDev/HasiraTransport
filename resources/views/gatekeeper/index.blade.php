@@ -1,13 +1,13 @@
 @extends('layouts.layout')
 
 @section('content')
-<div class="glass-panel p-6" x-data="gatekeeperQueueManager({{ Js::from($snapshot) }})" @keydown.escape.window="closeScheduleModal()">
+<div class="glass-panel p-6" x-data="gatekeeperQueueManager({{ Js::from($snapshot) }})" @keydown.escape.window="closeActionsModal(); closeScheduleModal()">
     <div class="mb-6 flex flex-col gap-5">
         <div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
                 <div class="mb-1 text-xs font-bold text-blue-600">بەڕێوەبردنی هاتوچۆ</div>
                 <h2 class="text-2xl font-bold text-slate-900">کۆنترۆڵی دەروازە</h2>
-                <p class="mt-1 text-gray-400">لە کاتی بڕانی ئینتەرنێتیش گۆڕانکارییەکان لەم ئامێرە هەڵدەگیرێن.</p>
+                <p class="mt-1 text-gray-400">گۆڕانکارییەکان ڕاستەوخۆ لە سێرڤەر هەڵدەگیرێن.</p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
                 <a href="{{ route('gatekeeper.export') }}" class="flex items-center gap-2 whitespace-nowrap rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 font-semibold text-emerald-700 transition-colors hover:bg-emerald-100">
@@ -25,11 +25,10 @@
                 @endcan
             </div>
         </div>
-        <div class="flex flex-col justify-between gap-4 border-t border-slate-200 pt-4 xl:flex-row xl:items-center">
+        <div class="border-t border-slate-200 pt-4">
             <input type="search" x-model="search" @input.debounce.100ms="search = $event.target.value" placeholder="گەڕان بەدوای بارهەڵگر، خاوەنی خەت، مۆبایل، VIN..." dir="rtl" autocomplete="off" class="glass-input w-full rounded-lg px-4 py-2 text-right text-sm xl:w-72">
-            <div class="min-w-0">@include('gatekeeper.partials.sync-status')</div>
         </div>
     </div>
-    @include('gatekeeper.partials.offline-table')
+    @include('gatekeeper.partials.queue-table')
 </div>
 @endsection
