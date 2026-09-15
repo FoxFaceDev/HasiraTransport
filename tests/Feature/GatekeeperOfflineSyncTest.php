@@ -175,6 +175,37 @@ it('renders realtime search on every status page', function (string $status) {
         ->assertSee('autocomplete="off"', false);
 })->with(['green', 'yellow', 'red', 'departed']);
 
+it('orders delayed trucks from the first status change to the last', function () {
+    $laterTanker = Tanker::create([
+        'sequence_number' => '1',
+        'sequence_owner' => 'Later owner',
+        'plate_number' => 'DELAYED-LATER',
+        'truck_type' => 'Tanker',
+    ]);
+
+    $this->travelTo(\Carbon\Carbon::parse('2026-09-15 09:00:00', 'Asia/Baghdad'));
+    $this->actingAs($this->gatekeeper)
+        ->postJson(route('gatekeeper.update-status', $this->tanker), ['status' => 'yellow'])
+        ->assertOk()
+        ->assertJsonPath('status_updated_at', fn ($value) => filled($value));
+
+    $firstChangedAt = $this->tanker->fresh()->latestQueue->status_updated_at;
+
+    $this->travelTo(\Carbon\Carbon::parse('2026-09-15 10:00:00', 'Asia/Baghdad'));
+    $this->actingAs($this->gatekeeper)
+        ->postJson(route('gatekeeper.update-status', $laterTanker), ['status' => 'yellow'])
+        ->assertOk();
+
+    $this->postJson(route('gatekeeper.update-note', $this->tanker), ['note' => 'Changed later'])
+        ->assertOk();
+
+    expect($this->tanker->fresh()->latestQueue->status_updated_at->equalTo($firstChangedAt))->toBeTrue();
+
+    $this->get(route('gatekeeper.filter', 'yellow'))
+        ->assertOk()
+        ->assertSeeInOrder(['TEST-100', 'DELAYED-LATER']);
+});
+
 it('filters dated statuses and renders the departed page', function () {
     $this->actingAs($this->gatekeeper)
         ->get(route('gatekeeper.filter', ['status' => 'green', 'date' => '2026-09-15']))

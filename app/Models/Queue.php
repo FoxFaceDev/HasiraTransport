@@ -13,11 +13,19 @@ class Queue extends Model
         'tanker_id',
         'driver_id',
         'status',
+        'status_updated_at',
         'gatekeeper_id',
         'scheduled_date',
         'scheduled_time',
         'note',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'status_updated_at' => 'datetime',
+        ];
+    }
 
     public function tanker()
     {

@@ -4,6 +4,7 @@ function normalizedQueue(queue = {}) {
         scheduled_date: queue.scheduled_date || null,
         scheduled_time: queue.scheduled_time || null,
         note: queue.note || '',
+        status_updated_at: queue.status_updated_at || queue.updated_at || null,
         updated_at: queue.updated_at || null,
     };
 }
@@ -41,7 +42,7 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
         get visibleTankers() {
             const query = this.search.trim().toLowerCase();
 
-            return this.tankers.filter(tanker => {
+            const visible = this.tankers.filter(tanker => {
                 if (this.statusFilter && this.getStatus(tanker) !== this.statusFilter) return false;
                 if (this.filterDate && ['green', 'yellow', 'departed'].includes(this.statusFilter)) {
                     if (tanker.queue?.scheduled_date !== this.filterDate) return false;
@@ -65,6 +66,17 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
                     this.getBlockReason(tanker),
                 ].some(value => String(value || '').toLowerCase().includes(query));
             });
+
+            if (this.statusFilter === 'yellow') {
+                return visible.sort((first, second) => {
+                    const firstChangedAt = Date.parse(first.queue?.status_updated_at || '') || 0;
+                    const secondChangedAt = Date.parse(second.queue?.status_updated_at || '') || 0;
+
+                    return firstChangedAt - secondChangedAt;
+                });
+            }
+
+            return visible;
         },
 
         isBlocked(tanker) {
@@ -161,6 +173,7 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
                     ...payload,
                     scheduled_date: result.scheduled_date,
                     scheduled_time: result.scheduled_time,
+                    status_updated_at: result.status_updated_at,
                 });
             }
             return result;

@@ -37,7 +37,7 @@ class QueueController extends Controller
             'date' => ['nullable', 'date_format:Y-m-d'],
         ]);
         $date = $validated['date'] ?? null;
-        $snapshot = $this->snapshot();
+        $snapshot = $this->snapshot($status);
 
         return view('gatekeeper.filter', compact('snapshot', 'status', 'date'));
     }
@@ -226,6 +226,7 @@ class QueueController extends Controller
         $dataToUpdate = [
             'driver_id' => null,
             'status' => $validated['status'],
+            'status_updated_at' => now(),
             'gatekeeper_id' => auth()->id(),
         ];
 
@@ -255,6 +256,7 @@ class QueueController extends Controller
             'status' => $queue->status,
             'scheduled_date' => $queue->scheduled_date,
             'scheduled_time' => $queue->scheduled_time,
+            'status_updated_at' => $queue->status_updated_at?->toIso8601String(),
         ]);
     }
 
@@ -418,7 +420,7 @@ class QueueController extends Controller
                         'scheduled_date' => $queue?->scheduled_date,
                         'scheduled_time' => $queue?->scheduled_time,
                         'note' => $queue?->note,
-                        'status_updated_at' => $queue?->updated_at,
+                        'status_updated_at' => $queue?->status_updated_at ?? $queue?->updated_at,
                     ];
                 })->all());
 
@@ -481,6 +483,7 @@ class QueueController extends Controller
         $data = [
             'driver_id' => null,
             'status' => $payload['status'],
+            'status_updated_at' => now(),
             'gatekeeper_id' => $gatekeeperId,
         ];
 
@@ -516,12 +519,23 @@ class QueueController extends Controller
         );
     }
 
-    private function snapshot(): array
+    private function snapshot(?string $status = null): array
     {
         $tankers = Tanker::with('latestQueue')
             ->orderByRaw('CAST(sequence_number AS UNSIGNED)')
             ->orderBy('sequence_number')
             ->get();
+
+        if ($status === 'yellow') {
+            $tankers = $tankers->sortBy(function (Tanker $tanker) {
+                if ($tanker->latestQueue?->status !== 'yellow') {
+                    return PHP_INT_MAX;
+                }
+
+                return ($tanker->latestQueue->status_updated_at ?? $tanker->latestQueue->updated_at)?->getTimestamp()
+                    ?? PHP_INT_MAX;
+            });
+        }
 
         return [
             'tankers' => $tankers->map(fn (Tanker $tanker) => [
@@ -540,12 +554,14 @@ class QueueController extends Controller
                     'scheduled_date' => $tanker->latestQueue->scheduled_date,
                     'scheduled_time' => $tanker->latestQueue->scheduled_time,
                     'note' => $tanker->latestQueue->note,
+                    'status_updated_at' => ($tanker->latestQueue->status_updated_at ?? $tanker->latestQueue->updated_at)?->toIso8601String(),
                     'updated_at' => $tanker->latestQueue->updated_at?->toIso8601String(),
                 ] : [
                     'status' => 'pending',
                     'scheduled_date' => null,
                     'scheduled_time' => null,
                     'note' => null,
+                    'status_updated_at' => null,
                     'updated_at' => null,
                 ],
             ])->values(),
