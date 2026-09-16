@@ -4,8 +4,8 @@
             <th class="py-3 px-4 font-normal">ڕیزبەندی</th><th class="py-3 px-4 font-normal">ژمارەی تەنکەر</th><th class="py-3 px-4 font-normal">خاوەنی خەت</th><th class="py-3 px-4 font-normal">مۆبایل</th><th class="py-3 px-4 font-normal">بەروار</th><th class="py-3 px-4 font-normal">کات</th><th class="py-3 px-4 font-normal">تێبینی</th><th class="py-3 px-4 font-normal">کردارەکان</th>
         </tr></thead>
         <tbody>
-            <template x-for="tanker in visibleTankers" :key="tanker.id">
-                <tr class="border-b border-white/5 transition-colors" :class="getRowClass(tanker)">
+            <template x-for="(tanker, index) in visibleTankers" :key="tanker.id">
+                <tr class="border-b border-white/5 transition-colors" :class="[getRowClass(tanker), getScheduleDayDividerClass(index, tanker)]">
                     <td class="py-3 px-4" x-text="tanker.sequence_number || '-'"></td>
                     <td class="py-3 px-4 font-medium">
                         <div class="flex items-center gap-2"><span x-text="tanker.plate_number || '-'"></span><span x-cloak x-show="tanker.blocked_at" class="blocked-badge">خەت بلۆککراوە</span></div>

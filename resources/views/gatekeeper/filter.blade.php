@@ -1,7 +1,7 @@
 @extends('layouts.layout')
 
 @section('content')
-<div class="glass-panel p-6" x-data="gatekeeperQueueManager({{ Js::from($snapshot) }}, { statusFilter: {{ Js::from($status) }}, filterDate: {{ Js::from($date) }}, exportBaseUrl: {{ Js::from(route('gatekeeper.export')) }} })" @keydown.escape.window="closeActionsModal(); closeScheduleModal()">
+<div class="glass-panel p-6" x-data="gatekeeperQueueManager({{ Js::from($snapshot) }}, { statusFilter: {{ Js::from($status) }}, filterDate: {{ Js::from($date) }}, sortMode: {{ Js::from($status === 'yellow' ? 'scheduled' : 'queue') }}, exportBaseUrl: {{ Js::from(route('gatekeeper.export')) }} })" @keydown.escape.window="closeActionsModal(); closeScheduleModal()">
     <div class="mb-6 flex flex-col gap-5">
         <div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>

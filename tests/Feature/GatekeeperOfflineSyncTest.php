@@ -198,6 +198,73 @@ it('shows the sorting choices on the main and every status list', function (stri
     'departed list' => fn () => route('gatekeeper.filter', 'departed'),
 ]);
 
+it('defaults the delayed list to date and time groups with day dividers', function () {
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.filter', 'yellow'))
+        ->assertOk()
+        ->assertSee("sortMode: 'scheduled'", false)
+        ->assertSee('<option value="scheduled">بەپێی ڕۆژ و کات</option>', false)
+        ->assertSee('getScheduleDayDividerClass(index, tanker)', false);
+
+    expect(file_get_contents(resource_path('js/gatekeeper.js')))
+        ->toContain("time.startsWith('5:30')")
+        ->toContain("time.startsWith('12:00')")
+        ->toContain('border-t-4 border-t-slate-500');
+});
+
+it('exports delayed trucks by date with 5:30 before 12:00', function () {
+    Queue::create([
+        'tanker_id' => $this->tanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'yellow',
+        'scheduled_date' => '2026-09-20',
+        'scheduled_time' => '12:00 نیوەڕۆ',
+    ]);
+
+    $earlyTanker = Tanker::create([
+        'sequence_number' => '2',
+        'sequence_owner' => 'Early owner',
+        'plate_number' => 'SUNDAY-0530',
+        'truck_type' => 'Tanker',
+    ]);
+    Queue::create([
+        'tanker_id' => $earlyTanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'yellow',
+        'scheduled_date' => '2026-09-20',
+        'scheduled_time' => '5:30 بەیانی',
+    ]);
+
+    $nextDayTanker = Tanker::create([
+        'sequence_number' => '1',
+        'sequence_owner' => 'Next day owner',
+        'plate_number' => 'MONDAY-0530',
+        'truck_type' => 'Tanker',
+    ]);
+    Queue::create([
+        'tanker_id' => $nextDayTanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'yellow',
+        'scheduled_date' => '2026-09-21',
+        'scheduled_time' => '5:30 بەیانی',
+    ]);
+
+    $response = $this->actingAs($this->gatekeeper)->get(route('gatekeeper.export', [
+        'status' => 'yellow',
+        'sort' => 'scheduled',
+    ]))->assertOk();
+
+    $zip = new ZipArchive;
+    expect($zip->open($response->baseResponse->getFile()->getPathname()))->toBeTrue();
+    $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+    $zip->close();
+
+    expect(strpos($sheet, 'SUNDAY-0530'))
+        ->toBeLessThan(strpos($sheet, 'TEST-100'))
+        ->and(strpos($sheet, 'TEST-100'))
+        ->toBeLessThan(strpos($sheet, 'MONDAY-0530'));
+});
+
 it('exports the selected list with its date filter and oldest-to-newest sorting', function () {
     Queue::create([
         'tanker_id' => $this->tanker->id,

@@ -60,7 +60,7 @@ class QueueController extends Controller
             'status' => ['nullable', 'in:green,red,yellow,departed'],
             'date' => ['nullable', 'date_format:Y-m-d'],
             'schedule' => ['nullable', 'boolean'],
-            'sort' => ['nullable', 'in:queue,newest,oldest'],
+            'sort' => ['nullable', 'in:queue,newest,oldest,scheduled'],
             'search' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -122,7 +122,42 @@ class QueueController extends Controller
             ])->contains(fn ($value) => Str::contains(Str::lower((string) $value), $needle));
         })->values();
 
-        if (in_array($validated['sort'] ?? null, ['newest', 'oldest'], true)) {
+        if (($validated['sort'] ?? null) === 'scheduled') {
+            $tankers = $tankers->sort(function (Tanker $first, Tanker $second) {
+                $firstDate = $first->latestQueue?->scheduled_date ?? '9999-12-31';
+                $secondDate = $second->latestQueue?->scheduled_date ?? '9999-12-31';
+                $comparison = $firstDate <=> $secondDate;
+
+                if ($comparison !== 0) {
+                    return $comparison;
+                }
+
+                $timeRank = static function (?string $time): int {
+                    if (str_starts_with((string) $time, '5:30')) {
+                        return 0;
+                    }
+
+                    if (str_starts_with((string) $time, '12:00')) {
+                        return 1;
+                    }
+
+                    return 2;
+                };
+                $firstTime = $first->latestQueue?->scheduled_time;
+                $secondTime = $second->latestQueue?->scheduled_time;
+                $comparison = $timeRank($firstTime) <=> $timeRank($secondTime);
+
+                if ($comparison !== 0) {
+                    return $comparison;
+                }
+
+                $comparison = strnatcasecmp((string) $firstTime, (string) $secondTime);
+
+                return $comparison !== 0
+                    ? $comparison
+                    : strnatcasecmp((string) $first->sequence_number, (string) $second->sequence_number);
+            })->values();
+        } elseif (in_array($validated['sort'] ?? null, ['newest', 'oldest'], true)) {
             $newestFirst = $validated['sort'] === 'newest';
             $tankers = $tankers->sort(function (Tanker $first, Tanker $second) use ($newestFirst) {
                 $firstTime = ($first->latestQueue?->status_updated_at

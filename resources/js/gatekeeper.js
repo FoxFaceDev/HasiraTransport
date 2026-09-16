@@ -69,7 +69,34 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
                 ].some(value => String(value || '').toLowerCase().includes(query));
             });
 
-            return visible.sort((first, second) => {
+            const sorted = visible.sort((first, second) => {
+                if (this.sortMode === 'scheduled') {
+                    const firstDate = first.queue?.scheduled_date || '9999-12-31';
+                    const secondDate = second.queue?.scheduled_date || '9999-12-31';
+                    const dateComparison = firstDate.localeCompare(secondDate);
+                    if (dateComparison !== 0) return dateComparison;
+
+                    const timeRank = value => {
+                        const time = String(value || '');
+                        if (time.startsWith('5:30')) return 0;
+                        if (time.startsWith('12:00')) return 1;
+                        return 2;
+                    };
+                    const firstTimeRank = timeRank(first.queue?.scheduled_time);
+                    const secondTimeRank = timeRank(second.queue?.scheduled_time);
+                    if (firstTimeRank !== secondTimeRank) return firstTimeRank - secondTimeRank;
+
+                    const timeComparison = String(first.queue?.scheduled_time || '')
+                        .localeCompare(String(second.queue?.scheduled_time || ''), undefined, { numeric: true });
+                    if (timeComparison !== 0) return timeComparison;
+
+                    return String(first.sequence_number || '').localeCompare(
+                        String(second.sequence_number || ''),
+                        undefined,
+                        { numeric: true, sensitivity: 'base' },
+                    );
+                }
+
                 if (['newest', 'oldest'].includes(this.sortMode)) {
                     const firstChangedAt = Date.parse(
                         first.queue?.status_updated_at || first.queue?.updated_at || first.created_at || '',
@@ -91,6 +118,15 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
                     { numeric: true, sensitivity: 'base' },
                 );
             });
+
+            if (this.statusFilter === 'yellow' && this.sortMode === 'scheduled') {
+                sorted.forEach((tanker, index) => {
+                    tanker.starts_new_schedule_day = index > 0
+                        && sorted[index - 1].queue?.scheduled_date !== tanker.queue?.scheduled_date;
+                });
+            }
+
+            return sorted;
         },
 
         get exportUrl() {
@@ -157,6 +193,11 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
             if (status === 'yellow') return 'queue-row-yellow';
             if (status === 'departed') return 'queue-row-departed';
             return '';
+        },
+
+        getScheduleDayDividerClass(index, tanker) {
+            if (this.statusFilter !== 'yellow' || this.sortMode !== 'scheduled' || index === 0) return '';
+            return tanker.starts_new_schedule_day ? 'border-t-4 border-t-slate-500' : '';
         },
 
         getScheduleRowClass(tanker) {
