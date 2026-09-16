@@ -176,7 +176,8 @@ class QueueController extends Controller
             })->values();
         }
 
-        $rows = [[
+        $isDepartedExport = $status === 'departed' && ! $scheduleOnly;
+        $headers = [
             'ڕیزبەندی',
             'ژمارەی تەنکەر',
             'خاوەنی خەت',
@@ -191,12 +192,19 @@ class QueueController extends Controller
             'تێبینی',
             'بلۆککراوە',
             'دوایین نوێکردنەوەی دۆخ',
-        ]];
+        ];
 
-        foreach ($tankers as $tanker) {
+        if ($isDepartedExport) {
+            $headers[0] = 'کۆدی حەسیرە';
+            array_unshift($headers, 'ژمارە');
+        }
+
+        $rows = [$headers];
+
+        foreach ($tankers as $index => $tanker) {
             $queue = $tanker->latestQueue;
             $status = $queue?->status ?? 'pending';
-            $rows[] = [
+            $row = [
                 $tanker->sequence_number,
                 $tanker->plate_number,
                 $tanker->sequence_owner,
@@ -214,9 +222,20 @@ class QueueController extends Controller
                 $tanker->blocked_at ? 'بەڵێ' : 'نەخێر',
                 $queue?->updated_at?->timezone('Asia/Baghdad')->format('Y-m-d H:i:s'),
             ];
+
+            if ($isDepartedExport) {
+                array_unshift($row, $index + 1);
+            }
+
+            $rows[] = $row;
         }
 
-        $path = XlsxWriter::create('کۆنترۆڵی دەروازە', $rows, [11, 18, 24, 17, 24, 18, 16, 16, 14, 18, 17, 30, 13, 23]);
+        $widths = [11, 18, 24, 17, 24, 18, 16, 16, 14, 18, 17, 30, 13, 23];
+        if ($isDepartedExport) {
+            array_unshift($widths, 8);
+        }
+
+        $path = XlsxWriter::create('کۆنترۆڵی دەروازە', $rows, $widths);
         $fileName = 'gatekeeper_'.now('Asia/Baghdad')->format('Y_m_d_H_i_s').'.xlsx';
 
         return response()->download($path, $fileName, [

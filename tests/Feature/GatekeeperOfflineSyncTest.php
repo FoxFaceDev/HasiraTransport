@@ -78,6 +78,47 @@ it('exports the complete gatekeeper table as a right-to-left Excel workbook', fu
         ->and($workbook)->toContain('کۆنترۆڵی دەروازە');
 });
 
+it('adds automatic row numbers and renames the ranking column in departed exports', function () {
+    Queue::create([
+        'tanker_id' => $this->tanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'departed',
+        'scheduled_date' => '2026-09-16',
+        'scheduled_time' => '09:00',
+    ]);
+
+    $secondTanker = Tanker::create([
+        'sequence_number' => '13',
+        'sequence_owner' => 'Second owner',
+        'plate_number' => 'DEPARTED-200',
+        'truck_type' => 'Tanker',
+    ]);
+    Queue::create([
+        'tanker_id' => $secondTanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'departed',
+        'scheduled_date' => '2026-09-16',
+        'scheduled_time' => '10:00',
+    ]);
+
+    $response = $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.export', ['status' => 'departed']))
+        ->assertOk();
+
+    $zip = new ZipArchive;
+    expect($zip->open($response->baseResponse->getFile()->getPathname()))->toBeTrue();
+    $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+    $zip->close();
+
+    expect($sheet)
+        ->toContain('<c r="A1" s="1" t="inlineStr"><is><t xml:space="preserve">ژمارە</t>')
+        ->toContain('<c r="B1" s="1" t="inlineStr"><is><t xml:space="preserve">کۆدی حەسیرە</t>')
+        ->toContain('<c r="A2" s="2" t="inlineStr"><is><t xml:space="preserve">1</t>')
+        ->toContain('<c r="B2" s="2" t="inlineStr"><is><t xml:space="preserve">12</t>')
+        ->toContain('<c r="A3" s="2" t="inlineStr"><is><t xml:space="preserve">2</t>')
+        ->toContain('<c r="B3" s="2" t="inlineStr"><is><t xml:space="preserve">13</t>');
+});
+
 it('embeds the initial truck snapshot in the gatekeeper page', function () {
     $this->actingAs($this->gatekeeper)
         ->get(route('gatekeeper.index'))
