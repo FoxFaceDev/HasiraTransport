@@ -59,15 +59,15 @@
         }
     }"
     x-init="$nextTick(() => filterTankers())"
-    class="space-y-6"
+    class="space-y-4"
 >
-    <div class="flex justify-between items-center">
+    <div class="flex flex-col justify-between gap-3 md:flex-row md:items-center">
         <div>
             <h2 class="text-2xl font-bold">خەتەکان</h2>
             <p class="text-gray-400 mt-1">کۆی گشتی خەتەکان: {{ $tankerCount }} / {{ $maxTankers }}</p>
         </div>
         
-        <div class="flex items-center gap-4">
+        <div class="flex flex-wrap items-center gap-3">
             <form action="{{ route('tankers.index') }}" method="GET" @submit.prevent="filterTankers()" class="flex gap-2">
                 <input type="search" name="search" x-model="tankerSearch" @input.debounce.100ms="filterTankers()" value="{{ request('search') }}" placeholder="گەڕان بەدوای خەت..." dir="rtl" autocomplete="off" class="glass-input px-4 py-2 rounded-lg text-sm w-64 text-right">
                 <button type="submit" class="btn-secondary px-4 py-2 rounded-lg text-sm font-semibold">گەڕان</button>
@@ -83,7 +83,7 @@
             @endcan
 
             @can('manage tanker settings')
-            <div class="glass-card p-4 flex items-center gap-4 ml-4">
+            <div class="glass-card p-2 flex items-center gap-3 ml-2">
                 <span class="text-sm">گۆڕینی سنور:</span>
                 <form action="{{ route('settings.max-tankers') }}" method="POST" class="flex gap-2">
                     @csrf

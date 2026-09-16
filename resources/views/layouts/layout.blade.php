@@ -139,23 +139,23 @@
         </div>
     </aside>
 
-    <main class="app-main min-w-0 flex-1 flex flex-col h-screen overflow-y-auto p-4 relative">
-        <header class="app-topbar flex justify-between items-center mb-5 px-5 py-3.5">
+    <main class="app-main min-w-0 flex-1 flex flex-col h-screen overflow-y-auto p-3 relative">
+        <header class="app-topbar flex justify-between items-center mb-3 px-4 py-2">
             <div class="flex items-center gap-3">
-                <div class="user-avatar w-10 h-10 rounded-xl flex items-center justify-center">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm4 14a7 7 0 0 0-14 0"/></svg>
+                <div class="user-avatar w-8 h-8 rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm4 14a7 7 0 0 0-14 0"/></svg>
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-900">{{ auth()->user()->name ?? 'User' }}</h3>
-                    <p class="text-xs text-slate-500">{{ auth()->user()?->roles->pluck('name')->map(fn ($role) => str_replace('_', ' ', $role))->join('، ') }}</p>
+                    <p class="text-[11px] leading-tight text-slate-500">{{ auth()->user()?->roles->pluck('name')->map(fn ($role) => str_replace('_', ' ', $role))->join('، ') }}</p>
                 </div>
             </div>
 
             <div x-data="{ online: navigator.onLine }" @online.window="online = true" @offline.window="online = false" class="flex items-center">
-                <div x-show="online" class="status-online flex items-center px-3 py-1.5 rounded-full font-semibold text-xs">
+                <div x-show="online" class="status-online flex items-center px-2.5 py-1 rounded-full font-semibold text-xs">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 ml-2"></span> ئۆنلاین
                 </div>
-                <div x-show="!online" style="display:none;" class="status-offline flex items-center px-3 py-1.5 rounded-full font-semibold text-xs">
+                <div x-show="!online" style="display:none;" class="status-offline flex items-center px-2.5 py-1 rounded-full font-semibold text-xs">
                     <span class="w-2 h-2 rounded-full bg-rose-500 ml-2 animate-pulse"></span> ئۆفلاین
                 </div>
             </div>

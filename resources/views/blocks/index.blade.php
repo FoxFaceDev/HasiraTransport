@@ -29,11 +29,10 @@
         }
     }"
     x-init="$nextTick(() => { filterRows('drivers'); filterRows('tankers'); })"
-    class="glass-panel p-6"
+    class="glass-panel p-4"
 >
-    <div class="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">
+    <div class="mb-3 flex flex-col justify-between gap-3 md:flex-row md:items-center">
         <div>
-            <div class="mb-1 text-xs font-bold text-amber-600">لیستی بلۆککراوەکان</div>
             <h2 class="text-2xl font-bold text-slate-900">بلۆککراوەکان</h2>
             <p class="mt-1 text-gray-400">شۆفێر و خەتە بلۆککراوەکان لێرە بەڕێوە ببە.</p>
         </div>
@@ -43,7 +42,7 @@
         </div>
     </div>
 
-    <div class="mb-5 inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+    <div class="mb-3 inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
         <button type="button" @click="selectTab('drivers')" :class="activeTab === 'drivers' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-800'" class="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-bold transition">
             <span>شۆفێرەکان</span>
             <span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{{ $drivers->count() }}</span>

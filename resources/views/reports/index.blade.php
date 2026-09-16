@@ -1,10 +1,9 @@
 @extends('layouts.layout')
 
 @section('content')
-<div class="glass-panel p-6">
-    <div class="flex justify-between items-center mb-6">
+<div class="glass-panel p-4">
+    <div class="flex justify-between items-center mb-3">
         <div>
-            <div class="text-xs font-bold text-blue-600 mb-1">ئەرشیف</div>
             <h2 class="text-2xl font-bold text-slate-900">ڕاپۆرتەکان</h2>
             <p class="text-gray-400 mt-1">ئەرشیفی ڕاپۆرتی سەرەکان</p>
         </div>

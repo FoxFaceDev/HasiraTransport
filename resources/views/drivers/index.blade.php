@@ -25,11 +25,11 @@
         }
     }"
     x-init="$nextTick(() => filterDrivers())"
-    class="space-y-6"
+    class="space-y-4"
 >
-    <div class="flex justify-between items-center">
+    <div class="flex flex-col justify-between gap-3 md:flex-row md:items-center">
         <h2 class="text-2xl font-bold">بەڕێوەبردنی شۆفێرەکان</h2>
-        <div class="flex items-center gap-4">
+        <div class="flex flex-wrap items-center gap-3">
             <form action="{{ route('drivers.index') }}" method="GET" @submit.prevent="filterDrivers()" class="flex gap-2">
                 <input type="search" name="search" x-model="search" @input.debounce.100ms="filterDrivers()" value="{{ request('search') }}" placeholder="گەڕان بەدوای شۆفێر..." dir="rtl" autocomplete="off" class="glass-input px-4 py-2 rounded-lg text-sm w-64 text-right">
                 <button type="submit" class="btn-secondary px-4 py-2 rounded-lg text-sm font-semibold">گەڕان</button>

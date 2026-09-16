@@ -176,7 +176,7 @@ class QueueController extends Controller
             })->values();
         }
 
-        $isDepartedExport = $status === 'departed' && ! $scheduleOnly;
+        $isNumberedExport = $scheduleOnly || ($status === 'departed' && ! $scheduleOnly);
         $headers = [
             'ڕیزبەندی',
             'ژمارەی تەنکەر',
@@ -194,7 +194,7 @@ class QueueController extends Controller
             'دوایین نوێکردنەوەی دۆخ',
         ];
 
-        if ($isDepartedExport) {
+        if ($isNumberedExport) {
             $headers[0] = 'کۆدی حەسیرە';
             array_unshift($headers, 'ژمارە');
         }
@@ -223,7 +223,7 @@ class QueueController extends Controller
                 $queue?->updated_at?->timezone('Asia/Baghdad')->format('Y-m-d H:i:s'),
             ];
 
-            if ($isDepartedExport) {
+            if ($isNumberedExport) {
                 array_unshift($row, $index + 1);
             }
 
@@ -231,7 +231,7 @@ class QueueController extends Controller
         }
 
         $widths = [11, 18, 24, 17, 24, 18, 16, 16, 14, 18, 17, 30, 13, 23];
-        if ($isDepartedExport) {
+        if ($isNumberedExport) {
             array_unshift($widths, 8);
         }
 

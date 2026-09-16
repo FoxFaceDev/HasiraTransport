@@ -137,6 +137,15 @@ it('embeds the initial truck snapshot in the gatekeeper page', function () {
         ->assertDontSee('x-text="index + 1"', false);
 });
 
+it('uses the compact shared header to leave more room for page content', function () {
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.index'))
+        ->assertOk()
+        ->assertSee('app-main min-w-0 flex-1 flex flex-col h-screen overflow-y-auto p-3 relative', false)
+        ->assertSee('app-topbar flex justify-between items-center mb-3 px-4 py-2', false)
+        ->assertSee('user-avatar w-8 h-8 rounded-lg', false);
+});
+
 it('does not advertise or render offline queue controls', function () {
     $this->actingAs($this->gatekeeper)
         ->get(route('gatekeeper.index'))
@@ -373,6 +382,12 @@ it('exports the selected list with its date filter and oldest-to-newest sorting'
     $zip->close();
 
     expect($sheet)
+        ->toContain('<c r="A1" s="1" t="inlineStr"><is><t xml:space="preserve">ژمارە</t>')
+        ->toContain('<c r="B1" s="1" t="inlineStr"><is><t xml:space="preserve">کۆدی حەسیرە</t>')
+        ->toContain('<c r="A2" s="2" t="inlineStr"><is><t xml:space="preserve">1</t>')
+        ->toContain('<c r="B2" s="2" t="inlineStr"><is><t xml:space="preserve">12</t>')
+        ->toContain('<c r="A3" s="2" t="inlineStr"><is><t xml:space="preserve">2</t>')
+        ->toContain('<c r="B3" s="2" t="inlineStr"><is><t xml:space="preserve">1</t>')
         ->toContain('TEST-100')
         ->toContain('NEWER-200')
         ->not->toContain('EXCLUDED-300')

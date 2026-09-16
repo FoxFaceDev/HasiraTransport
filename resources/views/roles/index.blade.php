@@ -1,11 +1,10 @@
 @extends('layouts.layout')
 
 @section('content')
-<div x-data="roleManager()" @keydown.escape.window="showEdit = false" class="min-w-0 space-y-5">
-    <section class="glass-panel p-6">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div x-data="roleManager()" @keydown.escape.window="showEdit = false" class="min-w-0 space-y-4">
+    <section class="glass-panel p-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
-                <div class="text-xs font-bold text-blue-600 mb-1">کۆنترۆڵی دەسەڵات</div>
                 <h1 class="text-2xl font-bold text-slate-900">ڕۆڵ و دەسەڵاتەکان</h1>
                 <p class="text-slate-500 mt-1">ڕۆڵ دروست بکە و بە چێکبۆکس دەسەڵاتی وردی بۆ دیاری بکە</p>
             </div>
@@ -13,7 +12,7 @@
         </div>
     </section>
 
-    <div class="grid xl:grid-cols-[minmax(0,1fr)_24rem] gap-5 items-start">
+    <div class="grid xl:grid-cols-[minmax(0,1fr)_24rem] gap-4 items-start">
         <section class="min-w-0 space-y-4">
             @foreach($roles as $role)
             <article class="glass-panel p-5">

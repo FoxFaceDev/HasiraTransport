@@ -1,23 +1,22 @@
 @extends('layouts.layout')
 
 @section('content')
-<div class="space-y-5">
-    <section class="glass-panel p-6">
-        <div class="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+<div class="space-y-4">
+    <section class="glass-panel p-4">
+        <div class="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
             <div>
-                <div class="mb-1 text-xs font-bold text-blue-600">چاودێری سیستەم</div>
                 <h1 class="text-2xl font-bold text-slate-900">تۆماری کردەوەکانی بەکارهێنەران</h1>
                 <p class="mt-1 text-slate-500">زیادکردن، دەستکاری، سڕینەوە، گۆڕینی دۆخ و کردارە گرنگەکانی بەکارهێنەران لێرە تۆمار دەکرێن.</p>
             </div>
             <div class="flex shrink-0 flex-row flex-nowrap gap-3 overflow-x-auto pb-1 text-center">
-                <div class="min-w-36 rounded-xl border border-slate-200 bg-white px-4 py-3"><div class="text-xl font-bold text-slate-900">{{ number_format($totalLogs) }}</div><div class="whitespace-nowrap text-xs text-slate-500">هەموو تۆمارەکان</div></div>
-                <div class="min-w-36 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3"><div class="text-xl font-bold text-blue-700">{{ number_format($todayLogs) }}</div><div class="whitespace-nowrap text-xs text-blue-600">ئەمڕۆ</div></div>
-                <div class="min-w-36 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"><div class="text-xl font-bold text-amber-700">{{ number_format($todayChanges) }}</div><div class="whitespace-nowrap text-xs text-amber-600">گۆڕانکارییەکانی ئەمڕۆ</div></div>
+                <div class="min-w-36 rounded-xl border border-slate-200 bg-white px-4 py-2"><div class="text-lg font-bold text-slate-900">{{ number_format($totalLogs) }}</div><div class="whitespace-nowrap text-xs text-slate-500">هەموو تۆمارەکان</div></div>
+                <div class="min-w-36 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2"><div class="text-lg font-bold text-blue-700">{{ number_format($todayLogs) }}</div><div class="whitespace-nowrap text-xs text-blue-600">ئەمڕۆ</div></div>
+                <div class="min-w-36 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2"><div class="text-lg font-bold text-amber-700">{{ number_format($todayChanges) }}</div><div class="whitespace-nowrap text-xs text-amber-600">گۆڕانکارییەکانی ئەمڕۆ</div></div>
             </div>
         </div>
     </section>
 
-    <section class="glass-panel p-5">
+    <section class="glass-panel p-4">
         <form method="GET" action="{{ route('audit-logs.index') }}" class="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
             <input type="search" name="search" value="{{ request('search') }}" placeholder="ناو، ئیمەیڵ، کردار، IP..." class="glass-input rounded-lg px-3 py-2 xl:col-span-2">
             <select name="user_id" class="glass-input rounded-lg px-3 py-2">

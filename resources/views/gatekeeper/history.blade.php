@@ -5,15 +5,14 @@
     $statusLabels = ['green' => 'هاتووە', 'yellow' => 'دواخراوە', 'red' => 'نەهاتووە', 'departed' => 'ڕۆیشتووە', 'pending' => 'دیاری نەکراوە'];
     $statusClasses = ['green' => 'bg-emerald-100 text-emerald-700', 'yellow' => 'bg-amber-100 text-amber-700', 'red' => 'bg-rose-100 text-rose-700', 'departed' => 'bg-sky-100 text-sky-700', 'pending' => 'bg-slate-100 text-slate-600'];
 @endphp
-<div class="space-y-5">
-    <div class="glass-panel p-6">
-        <div class="mb-5">
-            <div class="mb-1 text-xs font-bold text-blue-600">ئەرشیفی دەروازە</div>
+<div class="space-y-4">
+    <div class="glass-panel p-4">
+        <div class="mb-3">
             <h2 class="text-2xl font-bold text-slate-900">مێژووی خەتەکان</h2>
             <p class="mt-1 text-slate-500">لیستی ئێستا و تۆمارە ئەرشیفکراوەکان لە یەک خشتەدا پیشان دەدرێن.</p>
         </div>
 
-        <form method="GET" action="{{ route('gatekeeper.history') }}" class="grid grid-cols-1 items-end gap-4 md:grid-cols-5">
+        <form method="GET" action="{{ route('gatekeeper.history') }}" class="grid grid-cols-1 items-end gap-3 md:grid-cols-5">
             <label><span class="form-label mb-1 block">لە بەرواری</span><input type="date" name="from_date" value="{{ $fromDate }}" required class="glass-input w-full rounded-lg px-4 py-2"></label>
             <label><span class="form-label mb-1 block">تا بەرواری</span><input type="date" name="to_date" value="{{ $toDate }}" required class="glass-input w-full rounded-lg px-4 py-2"></label>
             <label>
