@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Mccarlosen\LaravelMpdf\Facades\LaravelMpdf as Pdf;
 use RuntimeException;
@@ -53,8 +54,16 @@ class QueueController extends Controller
         return view('gatekeeper.schedule', compact('snapshot', 'date'));
     }
 
-    public function export()
+    public function export(Request $request)
     {
+        $validated = $request->validate([
+            'status' => ['nullable', 'in:green,red,yellow,departed'],
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            'schedule' => ['nullable', 'boolean'],
+            'sort' => ['nullable', 'in:queue,newest,oldest'],
+            'search' => ['nullable', 'string', 'max:255'],
+        ]);
+
         $statusLabels = [
             'pending' => 'چاوەڕوان',
             'green' => 'هاتووە',
@@ -67,6 +76,70 @@ class QueueController extends Controller
             ->orderByRaw('CAST(sequence_number AS UNSIGNED)')
             ->orderBy('sequence_number')
             ->get();
+
+        $status = $validated['status'] ?? null;
+        $date = $validated['date'] ?? null;
+        $scheduleOnly = (bool) ($validated['schedule'] ?? false);
+        $search = trim($validated['search'] ?? '');
+
+        $tankers = $tankers->filter(function (Tanker $tanker) use ($status, $date, $scheduleOnly, $search) {
+            $queueStatus = $tanker->latestQueue?->status ?? 'pending';
+
+            if ($status && $queueStatus !== $status) {
+                return false;
+            }
+
+            if ($scheduleOnly) {
+                if (! in_array($queueStatus, ['green', 'yellow', 'departed'], true)) {
+                    return false;
+                }
+
+                if ($tanker->latestQueue?->scheduled_date !== $date) {
+                    return false;
+                }
+            } elseif ($date && in_array($status, ['green', 'yellow', 'departed'], true)) {
+                if ($tanker->latestQueue?->scheduled_date !== $date) {
+                    return false;
+                }
+            }
+
+            if ($search === '') {
+                return true;
+            }
+
+            $needle = Str::lower($search);
+
+            return collect([
+                $tanker->plate_number,
+                $tanker->sequence_number,
+                $tanker->sequence_owner,
+                $tanker->sequence_owner_phone,
+                $tanker->vin,
+                $tanker->truck_type,
+                $tanker->truck_model,
+                $tanker->truck_color,
+                $tanker->blocked_at ? 'خەت بلۆککراوە' : null,
+            ])->contains(fn ($value) => Str::contains(Str::lower((string) $value), $needle));
+        })->values();
+
+        if (in_array($validated['sort'] ?? null, ['newest', 'oldest'], true)) {
+            $newestFirst = $validated['sort'] === 'newest';
+            $tankers = $tankers->sort(function (Tanker $first, Tanker $second) use ($newestFirst) {
+                $firstTime = ($first->latestQueue?->status_updated_at
+                    ?? $first->latestQueue?->updated_at
+                    ?? $first->created_at)?->getTimestamp() ?? 0;
+                $secondTime = ($second->latestQueue?->status_updated_at
+                    ?? $second->latestQueue?->updated_at
+                    ?? $second->created_at)?->getTimestamp() ?? 0;
+                $comparison = $firstTime <=> $secondTime;
+
+                if ($comparison === 0) {
+                    $comparison = $first->id <=> $second->id;
+                }
+
+                return $newestFirst ? -$comparison : $comparison;
+            })->values();
+        }
 
         $rows = [[
             'ڕیزبەندی',
@@ -540,6 +613,7 @@ class QueueController extends Controller
         return [
             'tankers' => $tankers->map(fn (Tanker $tanker) => [
                 'id' => $tanker->id,
+                'created_at' => $tanker->created_at?->toIso8601String(),
                 'blocked_at' => $tanker->blocked_at?->toIso8601String(),
                 'sequence_number' => $tanker->sequence_number,
                 'sequence_owner' => $tanker->sequence_owner,

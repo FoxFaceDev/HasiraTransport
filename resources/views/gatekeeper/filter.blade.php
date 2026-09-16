@@ -1,7 +1,7 @@
 @extends('layouts.layout')
 
 @section('content')
-<div class="glass-panel p-6" x-data="gatekeeperQueueManager({{ Js::from($snapshot) }}, { statusFilter: {{ Js::from($status) }}, filterDate: {{ Js::from($date) }} })" @keydown.escape.window="closeActionsModal(); closeScheduleModal()">
+<div class="glass-panel p-6" x-data="gatekeeperQueueManager({{ Js::from($snapshot) }}, { statusFilter: {{ Js::from($status) }}, filterDate: {{ Js::from($date) }}, exportBaseUrl: {{ Js::from(route('gatekeeper.export')) }} })" @keydown.escape.window="closeActionsModal(); closeScheduleModal()">
     <div class="mb-6 flex flex-col gap-5">
         <div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
@@ -26,6 +26,8 @@
                 <input type="date" x-model="filterDate" @change="changeFilterDate($event.target.value)" class="glass-input w-full rounded-lg px-4 py-2">
             </label>
             @endif
+            @include('gatekeeper.partials.sort-control')
+            @include('gatekeeper.partials.export-control')
         </div>
     </div>
     @include('gatekeeper.partials.queue-table')

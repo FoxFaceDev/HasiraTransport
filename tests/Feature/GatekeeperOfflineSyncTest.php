@@ -160,6 +160,100 @@ it('renders the dated schedule page and links it from the sidebar', function () 
         ->assertSee(route('gatekeeper.schedule'), false);
 });
 
+it('includes trucks departed on the selected day in todays list and offers both sorts', function () {
+    $this->travelTo(\Carbon\Carbon::parse('2026-09-16 14:30:00', 'Asia/Baghdad'));
+
+    $this->actingAs($this->gatekeeper)
+        ->postJson(route('gatekeeper.update-status', $this->tanker), ['status' => 'departed'])
+        ->assertOk();
+
+    $this->get(route('gatekeeper.schedule', ['date' => '2026-09-16']))
+        ->assertOk()
+        ->assertSee('TEST-100', false)
+        ->assertSee('\u0022status\u0022:\u0022departed\u0022', false)
+        ->assertSee('بەپێی ژمارەی ڕیزبەندی')
+        ->assertSee('لە نوێوە بۆ کۆن')
+        ->assertSee('لە کۆنەوە بۆ نوێ')
+        ->assertSee(':href="exportUrl"', false);
+
+    expect(file_get_contents(resource_path('js/gatekeeper.js')))
+        ->toContain("['green', 'yellow', 'departed']")
+        ->toContain("['newest', 'oldest'].includes(this.sortMode)");
+});
+
+it('shows the sorting choices on the main and every status list', function (string $route) {
+    $this->actingAs($this->gatekeeper)
+        ->get($route)
+        ->assertOk()
+        ->assertSee('x-model="sortMode"', false)
+        ->assertSee('بەپێی ژمارەی ڕیزبەندی')
+        ->assertSee('لە نوێوە بۆ کۆن')
+        ->assertSee('لە کۆنەوە بۆ نوێ')
+        ->assertSee(':href="exportUrl"', false);
+})->with([
+    'main list' => fn () => route('gatekeeper.index'),
+    'arrived list' => fn () => route('gatekeeper.filter', 'green'),
+    'delayed list' => fn () => route('gatekeeper.filter', 'yellow'),
+    'not-arrived list' => fn () => route('gatekeeper.filter', 'red'),
+    'departed list' => fn () => route('gatekeeper.filter', 'departed'),
+]);
+
+it('exports the selected list with its date filter and oldest-to-newest sorting', function () {
+    Queue::create([
+        'tanker_id' => $this->tanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'green',
+        'scheduled_date' => '2026-09-16',
+        'scheduled_time' => '09:00',
+        'status_updated_at' => '2026-09-16 09:00:00',
+    ]);
+
+    $newerTanker = Tanker::create([
+        'sequence_number' => '1',
+        'sequence_owner' => 'Newer owner',
+        'plate_number' => 'NEWER-200',
+        'truck_type' => 'Tanker',
+    ]);
+    Queue::create([
+        'tanker_id' => $newerTanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'departed',
+        'scheduled_date' => '2026-09-16',
+        'scheduled_time' => '10:00',
+        'status_updated_at' => '2026-09-16 10:00:00',
+    ]);
+
+    $excludedTanker = Tanker::create([
+        'sequence_number' => '2',
+        'sequence_owner' => 'Excluded owner',
+        'plate_number' => 'EXCLUDED-300',
+        'truck_type' => 'Tanker',
+    ]);
+    Queue::create([
+        'tanker_id' => $excludedTanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'red',
+        'status_updated_at' => '2026-09-16 11:00:00',
+    ]);
+
+    $response = $this->actingAs($this->gatekeeper)->get(route('gatekeeper.export', [
+        'schedule' => 1,
+        'date' => '2026-09-16',
+        'sort' => 'oldest',
+    ]))->assertOk();
+
+    $zip = new ZipArchive;
+    expect($zip->open($response->baseResponse->getFile()->getPathname()))->toBeTrue();
+    $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+    $zip->close();
+
+    expect($sheet)
+        ->toContain('TEST-100')
+        ->toContain('NEWER-200')
+        ->not->toContain('EXCLUDED-300')
+        ->and(strpos($sheet, 'TEST-100'))->toBeLessThan(strpos($sheet, 'NEWER-200'));
+});
+
 it('rejects an invalid schedule date', function () {
     $this->actingAs($this->gatekeeper)
         ->get(route('gatekeeper.schedule', ['date' => 'not-a-date']))

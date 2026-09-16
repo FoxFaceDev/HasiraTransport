@@ -20,6 +20,8 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
     return {
         tankers: (initialSnapshot.tankers || []).map(tanker => ({ ...tanker, queue: normalizedQueue(tanker.queue) })),
         search: '',
+        sortMode: options.sortMode || 'queue',
+        exportBaseUrl: options.exportBaseUrl || '/gatekeeper/export',
         statusFilter: options.statusFilter || null,
         filterDate: options.filterDate || '',
         scheduleOnly: options.scheduleOnly || false,
@@ -49,7 +51,7 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
                 }
                 if (this.scheduleOnly) {
                     const status = this.getStatus(tanker);
-                    if (!['green', 'yellow'].includes(status)) return false;
+                    if (!['green', 'yellow', 'departed'].includes(status)) return false;
                     if (tanker.queue?.scheduled_date !== this.selectedDate) return false;
                 }
                 if (!query) return true;
@@ -67,16 +69,45 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
                 ].some(value => String(value || '').toLowerCase().includes(query));
             });
 
-            if (this.statusFilter === 'yellow') {
-                return visible.sort((first, second) => {
-                    const firstChangedAt = Date.parse(first.queue?.status_updated_at || '') || 0;
-                    const secondChangedAt = Date.parse(second.queue?.status_updated_at || '') || 0;
+            return visible.sort((first, second) => {
+                if (['newest', 'oldest'].includes(this.sortMode)) {
+                    const firstChangedAt = Date.parse(
+                        first.queue?.status_updated_at || first.queue?.updated_at || first.created_at || '',
+                    ) || 0;
+                    const secondChangedAt = Date.parse(
+                        second.queue?.status_updated_at || second.queue?.updated_at || second.created_at || '',
+                    ) || 0;
 
-                    return firstChangedAt - secondChangedAt;
-                });
+                    if (this.sortMode === 'oldest') {
+                        return firstChangedAt - secondChangedAt || Number(first.id) - Number(second.id);
+                    }
+
+                    return secondChangedAt - firstChangedAt || Number(second.id) - Number(first.id);
+                }
+
+                return String(first.sequence_number || '').localeCompare(
+                    String(second.sequence_number || ''),
+                    undefined,
+                    { numeric: true, sensitivity: 'base' },
+                );
+            });
+        },
+
+        get exportUrl() {
+            const url = new URL(this.exportBaseUrl, window.location.origin);
+
+            url.searchParams.set('sort', this.sortMode);
+            if (this.search.trim()) url.searchParams.set('search', this.search.trim());
+            if (this.statusFilter) url.searchParams.set('status', this.statusFilter);
+
+            if (this.scheduleOnly) {
+                url.searchParams.set('schedule', '1');
+                url.searchParams.set('date', this.selectedDate);
+            } else if (this.filterDate) {
+                url.searchParams.set('date', this.filterDate);
             }
 
-            return visible;
+            return url.toString();
         },
 
         isBlocked(tanker) {
@@ -94,6 +125,7 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
         getStatusLabel(tanker) {
             if (this.getStatus(tanker) === 'green') return 'هاتن';
             if (this.getStatus(tanker) === 'yellow') return 'دواخستن';
+            if (this.getStatus(tanker) === 'departed') return 'ڕۆیشتن';
             return '';
         },
 
@@ -128,7 +160,9 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
         },
 
         getScheduleRowClass(tanker) {
-            return this.getStatus(tanker) === 'green' ? 'queue-row-green' : 'queue-row-yellow';
+            if (this.getStatus(tanker) === 'green') return 'queue-row-green';
+            if (this.getStatus(tanker) === 'departed') return 'queue-row-departed';
+            return 'queue-row-yellow';
         },
 
         openActionsModal(tanker) {
