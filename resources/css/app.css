@@ -183,6 +183,100 @@
         color: #172033;
     }
 
+    .dashboard-hero {
+        background:
+            radial-gradient(circle at 12% 15%, rgba(56, 189, 248, 0.42), transparent 17rem),
+            linear-gradient(125deg, #0f3f91 0%, #155cc5 55%, #0284c7 100%);
+        box-shadow: 0 18px 45px rgba(15, 63, 145, 0.24);
+        position: relative;
+    }
+
+    .dashboard-hero::after {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 9999px;
+        content: '';
+        height: 15rem;
+        left: -3rem;
+        position: absolute;
+        top: -7rem;
+        width: 15rem;
+    }
+
+    .dashboard-stat-card {
+        align-items: center;
+        border-style: solid;
+        border-width: 1px;
+        border-radius: 1rem;
+        box-shadow: 0 10px 28px rgba(30, 55, 90, 0.08);
+        display: flex;
+        gap: 1rem;
+        min-height: 7.5rem;
+        padding: 1rem;
+    }
+
+    .dashboard-stat-icon {
+        align-items: center;
+        border-radius: 0.9rem;
+        display: flex;
+        flex: 0 0 auto;
+        height: 3.25rem;
+        justify-content: center;
+        width: 3.25rem;
+    }
+
+    .dashboard-stat-icon svg {
+        height: 1.55rem;
+        width: 1.55rem;
+    }
+
+    .dashboard-donut {
+        align-items: center;
+        border-radius: 9999px;
+        display: flex;
+        height: 9.5rem;
+        justify-content: center;
+        position: relative;
+        width: 9.5rem;
+    }
+
+    .dashboard-donut::before {
+        background: #f9fbfd;
+        border-radius: 9999px;
+        box-shadow: inset 0 0 0 1px #e2e8f0;
+        content: '';
+        inset: 1.25rem;
+        position: absolute;
+    }
+
+    .dashboard-donut > div {
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        z-index: 1;
+    }
+
+    .dashboard-donut strong {
+        color: #0f172a;
+        font-size: 1.75rem;
+        font-weight: 900;
+        line-height: 1;
+    }
+
+    .dashboard-donut span {
+        color: #64748b;
+        font-size: 0.65rem;
+        margin-top: 0.35rem;
+    }
+
+    .dashboard-bar {
+        background: linear-gradient(180deg, #38bdf8 0%, #2563eb 100%);
+        border-radius: 0.65rem 0.65rem 0.2rem 0.2rem;
+        box-shadow: 0 7px 16px rgba(37, 99, 235, 0.16);
+        min-height: 0.35rem;
+        transition: height 260ms ease;
+    }
+
     .glass-input {
         background: #eef3f8;
         border: 1px solid #c4d0df;

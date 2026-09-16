@@ -43,6 +43,12 @@
         </div>
 
         <nav class="flex-1 mt-4 px-3 space-y-1.5 overflow-y-auto">
+            @if(auth()->user()->can('view tankers') || auth()->user()->can('view gatekeeper'))
+            <a href="{{ route('dashboard') }}" title="داشبۆرد" class="nav-link {{ request()->routeIs('dashboard') ? 'is-active' : '' }}">
+                <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 13h6V4H4v9Zm10 7h6V11h-6v9ZM4 20h6v-3H4v3Zm10-13h6V4h-6v3Z"/></svg>
+                <span>داشبۆرد</span>
+            </a>
+            @endif
             @can('view drivers')
             <a href="{{ route('drivers.index') }}" title="شۆفێرەکان" class="nav-link {{ request()->routeIs('drivers.*') ? 'is-active' : '' }}">
                 <svg class="w-5 h-5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m10-10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm10 10v-2a4 4 0 0 0-3-3.87m-2-7.96a4 4 0 0 1 0 7.75"/></svg>

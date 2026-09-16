@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlockController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DriverController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QueueController;
@@ -17,21 +18,7 @@ Route::get('/', function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', function () {
-        if (auth()->user()->can('view tankers')) {
-            return redirect()->route('tankers.index');
-        }
-
-        if (auth()->user()->can('view gatekeeper')) {
-            return redirect()->route('gatekeeper.index');
-        }
-
-        if (auth()->user()->can('manage users')) {
-            return redirect()->route('users.index');
-        }
-
-        abort(403, 'No dashboard permission has been assigned to this account.');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/drivers', [DriverController::class, 'index'])->middleware('can:view drivers')->name('drivers.index');
     Route::post('/drivers', [DriverController::class, 'store'])->middleware('can:create drivers')->name('drivers.store');
