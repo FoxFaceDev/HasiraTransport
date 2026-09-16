@@ -243,6 +243,7 @@
     <!-- Edit Modal -->
     @can('edit tankers')
     <div x-show="showEditModal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" style="display: none;">
+        <template x-if="editTanker">
         <div @click.away="showEditModal = false" class="glass-card w-full max-w-md p-6">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-bold">دەستکاری بارهەڵگر</h3>
@@ -290,6 +291,7 @@
                 </div>
             </form>
         </div>
+        </template>
     </div>
     @endcan
 
