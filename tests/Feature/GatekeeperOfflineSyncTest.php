@@ -212,7 +212,9 @@ it('defaults the delayed list to date and time groups with day dividers', functi
     expect($script)
         ->toContain("time.startsWith('5:30')")
         ->toContain("time.startsWith('12:00')")
-        ->toContain('border-t-4 border-t-slate-500')
+        ->toContain('schedule-day-divider')
+        ->toContain('queue-row-yellow-early')
+        ->toContain('queue-row-yellow-late')
         ->and($script)->toContain('شەممە')
         ->toContain('یەک شەممە')
         ->toContain('دوو شەممە')
@@ -220,6 +222,11 @@ it('defaults the delayed list to date and time groups with day dividers', functi
         ->toContain('چوار شەممە')
         ->toContain('پێنج شەممە')
         ->toContain('هەینی');
+
+    expect(file_get_contents(resource_path('css/app.css')))
+        ->toContain('tr.queue-row-yellow-early > td')
+        ->toContain('tr.queue-row-yellow-late > td')
+        ->toContain('tr.schedule-day-divider > td');
 });
 
 it('exports delayed trucks by date with 5:30 before 12:00', function () {

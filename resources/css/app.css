@@ -375,6 +375,38 @@
         background-color: #ffe69a !important;
     }
 
+    .glass-panel table tbody tr.queue-row-yellow-early > td {
+        background-color: #fff6c7 !important;
+        border-top: 1px solid #f3dc7a;
+        border-bottom: 1px solid #f3dc7a;
+    }
+
+    .glass-panel table tbody tr.queue-row-yellow-early > td:first-child {
+        border-right: 5px solid #eab308;
+    }
+
+    .glass-panel table tbody tr.queue-row-yellow-early:hover > td {
+        background-color: #ffed9e !important;
+    }
+
+    .glass-panel table tbody tr.queue-row-yellow-late > td {
+        background-color: #f6cf65 !important;
+        border-top: 1px solid #d9a514;
+        border-bottom: 1px solid #d9a514;
+    }
+
+    .glass-panel table tbody tr.queue-row-yellow-late > td:first-child {
+        border-right: 5px solid #b77908;
+    }
+
+    .glass-panel table tbody tr.queue-row-yellow-late:hover > td {
+        background-color: #edbb3e !important;
+    }
+
+    .glass-panel table tbody tr.schedule-day-divider > td {
+        border-top: 4px solid #64748b !important;
+    }
+
     .glass-panel table tbody tr.queue-row-red > td {
         background-color: #ffdee4 !important;
         border-top: 1px solid #f8aeb9;

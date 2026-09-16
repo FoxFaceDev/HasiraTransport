@@ -209,14 +209,22 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
             const status = this.getStatus(tanker);
             if (status === 'green') return 'queue-row-green';
             if (status === 'red') return 'queue-row-red';
-            if (status === 'yellow') return 'queue-row-yellow';
+            if (status === 'yellow') {
+                if (this.statusFilter === 'yellow') {
+                    const scheduledTime = String(tanker.queue?.scheduled_time || '');
+                    if (scheduledTime.startsWith('5:30')) return 'queue-row-yellow-early';
+                    if (scheduledTime.startsWith('12:00')) return 'queue-row-yellow-late';
+                }
+
+                return 'queue-row-yellow';
+            }
             if (status === 'departed') return 'queue-row-departed';
             return '';
         },
 
         getScheduleDayDividerClass(index, tanker) {
             if (this.statusFilter !== 'yellow' || this.sortMode !== 'scheduled' || index === 0) return '';
-            return tanker.starts_new_schedule_day ? 'border-t-4 border-t-slate-500' : '';
+            return tanker.starts_new_schedule_day ? 'schedule-day-divider' : '';
         },
 
         getScheduleRowClass(tanker) {
