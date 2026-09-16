@@ -204,12 +204,22 @@ it('defaults the delayed list to date and time groups with day dividers', functi
         ->assertOk()
         ->assertSee("sortMode: 'scheduled'", false)
         ->assertSee('<option value="scheduled">بەپێی ڕۆژ و کات</option>', false)
-        ->assertSee('getScheduleDayDividerClass(index, tanker)', false);
+        ->assertSee('getScheduleDayDividerClass(index, tanker)', false)
+        ->assertSee('getScheduledDateLabel(tanker)', false);
 
-    expect(file_get_contents(resource_path('js/gatekeeper.js')))
+    $script = file_get_contents(resource_path('js/gatekeeper.js'));
+
+    expect($script)
         ->toContain("time.startsWith('5:30')")
         ->toContain("time.startsWith('12:00')")
-        ->toContain('border-t-4 border-t-slate-500');
+        ->toContain('border-t-4 border-t-slate-500')
+        ->and($script)->toContain('شەممە')
+        ->toContain('یەک شەممە')
+        ->toContain('دوو شەممە')
+        ->toContain('سێ شەممە')
+        ->toContain('چوار شەممە')
+        ->toContain('پێنج شەممە')
+        ->toContain('هەینی');
 });
 
 it('exports delayed trucks by date with 5:30 before 12:00', function () {

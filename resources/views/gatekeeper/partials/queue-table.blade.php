@@ -18,7 +18,7 @@
                         <span x-text="tanker.sequence_owner_phone || '-'"></span>
                         @endcan
                     </td>
-                    <td class="py-3 px-4" x-text="tanker.queue?.scheduled_date || '-'"></td><td class="py-3 px-4" x-text="tanker.queue?.scheduled_time || '-'"></td>
+                    <td class="whitespace-nowrap py-3 px-4" x-text="getScheduledDateLabel(tanker)"></td><td class="py-3 px-4" x-text="tanker.queue?.scheduled_time || '-'"></td>
                     <td class="py-3 px-4">
                         @can('update queue notes')
                         <input type="text" :value="tanker.queue?.note || ''" @input.debounce.1000ms="updateNote(tanker.id, $el.value)" placeholder="تێبینی بنووسە..." class="glass-input w-full min-w-[150px] rounded-lg px-3 py-1 text-sm">

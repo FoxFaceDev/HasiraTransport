@@ -165,6 +165,25 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
             return '';
         },
 
+        getScheduledDateLabel(tanker) {
+            const date = tanker.queue?.scheduled_date;
+            if (!date) return '-';
+            if (this.statusFilter !== 'yellow') return date;
+
+            const weekdays = [
+                'یەک شەممە',
+                'دوو شەممە',
+                'سێ شەممە',
+                'چوار شەممە',
+                'پێنج شەممە',
+                'هەینی',
+                'شەممە',
+            ];
+            const dayIndex = new Date(`${date}T00:00:00Z`).getUTCDay();
+
+            return `${date} — ${weekdays[dayIndex]}`;
+        },
+
         changeScheduleDate(date) {
             this.selectedDate = date || localDateString();
 
