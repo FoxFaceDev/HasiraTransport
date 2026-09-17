@@ -4,8 +4,10 @@ use App\Models\GatekeeperSyncOperation;
 use App\Models\Queue;
 use App\Models\QueueArchive;
 use App\Models\QueueArchiveItem;
+use App\Models\QueueStatusEvent;
 use App\Models\Tanker;
 use App\Models\User;
+use Carbon\Carbon;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -169,6 +171,7 @@ it('uses the ranking label throughout the gatekeeper tables and monthly PDF', fu
         ->assertSee('ڕیزبەندی')
         ->assertDontSee('زنجیرە');
 
+    $this->tanker->setAttribute('departed_count', 3);
     $html = view('pdf.queue_report', [
         'tankers' => collect([$this->tanker->load('latestQueue')]),
         'generatedAt' => now(),
@@ -179,8 +182,14 @@ it('uses the ranking label throughout the gatekeeper tables and monthly PDF', fu
         ->toContain('کەمپی حەسیرە')
         ->toContain('ڕاپۆرتی مانگانە')
         ->toContain('ڕیزبەندی')
+        ->toContain('ژمارەی ڕۆیشتن')
+        ->toContain('>3</td>')
         ->toContain('data:image/svg+xml;base64,')
         ->not->toContain('زنجیرە');
+
+    expect(file_get_contents(app_path('Http/Controllers/QueueController.php')))
+        ->toContain("'default_font' => 'kjino'")
+        ->toContain("'R' => 'KJino.TTF'");
 });
 
 it('opens gatekeeper actions in one modal and reverts a selected status from it', function () {
@@ -189,10 +198,10 @@ it('opens gatekeeper actions in one modal and reverts a selected status from it'
         ->assertOk()
         ->assertSee('@click="openActionsModal(tanker)"', false)
         ->assertSee('x-show="showActionsModal"', false)
-        ->assertSee("getStatus(actionsTanker) === 'green' ? revertStatus(actionsTanker.id)", false)
-        ->assertSee("getStatus(actionsTanker) === 'yellow' ? revertStatus(actionsTanker.id)", false)
-        ->assertSee("getStatus(actionsTanker) === 'red' ? revertStatus(actionsTanker.id)", false)
-        ->assertSee("getStatus(actionsTanker) === 'departed' ? revertStatus(actionsTanker.id) : updateStatus(actionsTanker.id, 'departed')", false)
+        ->assertSee("getCurrentStatus(actionsTanker) === 'green' ? revertStatus(actionsTanker.id)", false)
+        ->assertSee("getCurrentStatus(actionsTanker) === 'yellow' ? revertStatus(actionsTanker.id)", false)
+        ->assertSee("getCurrentStatus(actionsTanker) === 'red' ? revertStatus(actionsTanker.id)", false)
+        ->assertSee("getCurrentStatus(actionsTanker) === 'departed' ? revertStatus(actionsTanker.id) : updateStatus(actionsTanker.id, 'departed')", false)
         ->assertDontSee("openScheduleModal(actionsTanker.id, 'departed')", false)
         ->assertDontSee('>گەڕاندنەوە</button>', false);
 });
@@ -211,7 +220,7 @@ it('renders the dated schedule page and links it from the sidebar', function () 
 });
 
 it('includes trucks departed on the selected day in todays list and offers both sorts', function () {
-    $this->travelTo(\Carbon\Carbon::parse('2026-09-16 14:30:00', 'Asia/Baghdad'));
+    $this->travelTo(Carbon::parse('2026-09-16 14:30:00', 'Asia/Baghdad'));
 
     $this->actingAs($this->gatekeeper)
         ->postJson(route('gatekeeper.update-status', $this->tanker), ['status' => 'departed'])
@@ -417,7 +426,7 @@ it('orders delayed trucks from the first status change to the last', function ()
         'truck_type' => 'Tanker',
     ]);
 
-    $this->travelTo(\Carbon\Carbon::parse('2026-09-15 09:00:00', 'Asia/Baghdad'));
+    $this->travelTo(Carbon::parse('2026-09-15 09:00:00', 'Asia/Baghdad'));
     $this->actingAs($this->gatekeeper)
         ->postJson(route('gatekeeper.update-status', $this->tanker), ['status' => 'yellow'])
         ->assertOk()
@@ -425,7 +434,7 @@ it('orders delayed trucks from the first status change to the last', function ()
 
     $firstChangedAt = $this->tanker->fresh()->latestQueue->status_updated_at;
 
-    $this->travelTo(\Carbon\Carbon::parse('2026-09-15 10:00:00', 'Asia/Baghdad'));
+    $this->travelTo(Carbon::parse('2026-09-15 10:00:00', 'Asia/Baghdad'));
     $this->actingAs($this->gatekeeper)
         ->postJson(route('gatekeeper.update-status', $laterTanker), ['status' => 'yellow'])
         ->assertOk();
@@ -455,7 +464,7 @@ it('filters dated statuses and renders the departed page', function () {
 });
 
 it('saves the departed status with its date', function () {
-    $this->travelTo(\Carbon\Carbon::parse('2026-09-15 16:42:00', 'Asia/Baghdad'));
+    $this->travelTo(Carbon::parse('2026-09-15 16:42:00', 'Asia/Baghdad'));
 
     $this->actingAs($this->gatekeeper)
         ->postJson(route('gatekeeper.update-status', $this->tanker), [
@@ -469,6 +478,80 @@ it('saves the departed status with its date', function () {
     expect($this->tanker->fresh()->latestQueue->status)->toBe('departed')
         ->and($this->tanker->fresh()->latestQueue->scheduled_date)->toBe('2026-09-15')
         ->and($this->tanker->fresh()->latestQueue->scheduled_time)->toBe('16:42');
+});
+
+it('keeps every repeated truck status occurrence in its live status list until reset', function () {
+    $this->travelTo(Carbon::parse('2026-09-15 08:00:00', 'Asia/Baghdad'));
+    $this->actingAs($this->gatekeeper)
+        ->postJson(route('gatekeeper.update-status', $this->tanker), [
+            'status' => 'green',
+            'scheduled_date' => '2026-09-15',
+            'scheduled_time' => '08:00',
+        ])
+        ->assertOk();
+
+    $this->travelTo(Carbon::parse('2026-09-15 09:00:00', 'Asia/Baghdad'));
+    $this->postJson(route('gatekeeper.update-status', $this->tanker), ['status' => 'departed'])
+        ->assertOk();
+
+    $this->travelTo(Carbon::parse('2026-09-15 10:00:00', 'Asia/Baghdad'));
+    $this->postJson(route('gatekeeper.update-status', $this->tanker), [
+        'status' => 'green',
+        'scheduled_date' => '2026-09-15',
+        'scheduled_time' => '10:00',
+    ])
+        ->assertOk();
+
+    $this->travelTo(Carbon::parse('2026-09-15 11:00:00', 'Asia/Baghdad'));
+    $this->postJson(route('gatekeeper.update-status', $this->tanker), ['status' => 'departed'])
+        ->assertOk()
+        ->assertJsonPath('departed_count', 2);
+
+    expect(QueueStatusEvent::query()->where('status', 'green')->count())->toBe(2)
+        ->and(QueueStatusEvent::query()->where('status', 'departed')->count())->toBe(2);
+
+    $greenList = $this->get(route('gatekeeper.filter', 'green'))->assertOk();
+    expect(substr_count($greenList->getContent(), 'TEST-100'))->toBe(2)
+        ->and(substr_count($greenList->getContent(), 'status-event-'))->toBe(2)
+        ->and(substr_count($greenList->getContent(), '\u0022departed_count\u0022:2'))->toBe(2);
+
+    $departedList = $this->get(route('gatekeeper.filter', 'departed'))->assertOk();
+    expect(substr_count($departedList->getContent(), 'TEST-100'))->toBe(2)
+        ->and(substr_count($departedList->getContent(), '\u0022departed_count\u0022:2'))->toBe(2);
+
+    $this->get(route('gatekeeper.index'))
+        ->assertOk()
+        ->assertSee('\u0022departed_count\u0022:2', false)
+        ->assertSee('ژمارەی ڕۆیشتن');
+
+    Storage::fake('public');
+    $this->post(route('gatekeeper.reset'))->assertOk();
+
+    expect(QueueStatusEvent::query()->whereNotNull('queue_archive_id')->count())->toBe(4);
+    $this->get(route('gatekeeper.filter', 'green'))
+        ->assertOk()
+        ->assertDontSee('TEST-100');
+});
+
+it('undoes only the latest current status occurrence when returning a truck to pending', function () {
+    $this->actingAs($this->gatekeeper)
+        ->postJson(route('gatekeeper.update-status', $this->tanker), ['status' => 'green'])
+        ->assertOk();
+
+    $this->postJson(route('gatekeeper.update-status', $this->tanker), ['status' => 'departed'])
+        ->assertOk()
+        ->assertJsonPath('departed_count', 1);
+
+    $this->postJson(route('gatekeeper.update-status', $this->tanker), [
+        'status' => 'pending',
+        'scheduled_date' => null,
+        'scheduled_time' => null,
+    ])->assertOk()
+        ->assertJsonPath('departed_count', 0);
+
+    expect(QueueStatusEvent::query()->where('status', 'green')->count())->toBe(1)
+        ->and(QueueStatusEvent::query()->where('status', 'departed')->count())->toBe(0)
+        ->and($this->tanker->fresh()->latestQueue->status)->toBe('pending');
 });
 
 it('clears an existing date and time when marking a tanker as not arrived', function () {
@@ -733,7 +816,7 @@ it('shows every reset archive inside a date range', function () {
         ['2026-09-03 09:00:00', 'First reset'],
         ['2026-09-20 14:00:00', 'Second reset'],
     ] as [$resetAt, $note]) {
-        $this->travelTo(\Carbon\Carbon::parse($resetAt, 'Asia/Baghdad'));
+        $this->travelTo(Carbon::parse($resetAt, 'Asia/Baghdad'));
         Queue::updateOrCreate(['tanker_id' => $this->tanker->id], [
             'gatekeeper_id' => $this->gatekeeper->id,
             'status' => 'green',

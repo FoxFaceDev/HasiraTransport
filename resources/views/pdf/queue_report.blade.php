@@ -11,7 +11,7 @@
         body {
             color: #25344f;
             direction: rtl;
-            font-family: notosansarabic, sans-serif;
+            font-family: kjino, sans-serif;
             font-size: 10pt;
             line-height: 1.55;
         }
@@ -196,13 +196,14 @@
     <table class="data-table" dir="rtl">
         <thead>
             <tr>
-                <th width="6%">ڕیزبەندی</th>
-                <th width="10%">ژمارەی تەنکەر</th>
-                <th width="14%">خاوەنی خەت</th>
-                <th width="10%">مۆبایل</th>
-                <th width="10%">جۆری بارهەڵگر</th>
-                <th width="8%">مۆدێل</th>
-                <th width="8%">دۆخ</th>
+                <th width="5%">ڕیزبەندی</th>
+                <th width="9%">ژمارەی تەنکەر</th>
+                <th width="13%">خاوەنی خەت</th>
+                <th width="9%">مۆبایل</th>
+                <th width="9%">جۆری بارهەڵگر</th>
+                <th width="7%">مۆدێل</th>
+                <th width="7%">دۆخ</th>
+                <th width="7%">ژمارەی ڕۆیشتن</th>
                 <th width="13%">تێبینی</th>
                 <th width="12%">بەرواری دیاریکراو</th>
                 <th width="9%">کاتی دیاریکراو</th>
@@ -221,13 +222,14 @@
                 <td class="center">{{ $tanker->truck_type ?: '-' }}</td>
                 <td class="center">{{ $tanker->truck_model ?: '-' }}</td>
                 <td class="center status-{{ $status }}">{{ $statusLabels[$status] ?? $status }}</td>
+                <td class="center status-departed">{{ number_format((int) ($tanker->departed_count ?? 0)) }}</td>
                 <td class="{{ $queue?->note ? '' : 'muted' }}">{{ $queue?->note ?: '-' }}</td>
                 <td class="center {{ $queue?->scheduled_date ? '' : 'muted' }}">{{ $queue?->scheduled_date ? \Carbon\Carbon::parse($queue->scheduled_date)->format('Y-m-d') : '-' }}</td>
                 <td class="center {{ $queue?->scheduled_time ? '' : 'muted' }}">{{ $queue?->scheduled_time ?: '-' }}</td>
             </tr>
             @empty
             <tr>
-                <td colspan="10" class="empty-state">هیچ تەنکەرێک تۆمار نەکراوە.</td>
+                <td colspan="11" class="empty-state">هیچ تەنکەرێک تۆمار نەکراوە.</td>
             </tr>
             @endforelse
         </tbody>

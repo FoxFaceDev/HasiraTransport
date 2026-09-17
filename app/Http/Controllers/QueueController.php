@@ -6,6 +6,7 @@ use App\Models\GatekeeperSyncOperation;
 use App\Models\Queue;
 use App\Models\QueueArchive;
 use App\Models\QueueArchiveItem;
+use App\Models\QueueStatusEvent;
 use App\Models\Tanker;
 use App\Support\XlsxWriter;
 use Carbon\Carbon;
@@ -71,13 +72,15 @@ class QueueController extends Controller
             'red' => 'نەهاتووە',
             'departed' => 'ڕۆیشتووە',
         ];
-        $tankers = Tanker::query()
-            ->with('latestQueue')
-            ->orderByRaw('CAST(sequence_number AS UNSIGNED)')
-            ->orderBy('sequence_number')
-            ->get();
-
         $status = $validated['status'] ?? null;
+        $tankers = $status
+            ? $this->activeStatusTankers($status)
+            : Tanker::query()
+                ->with('latestQueue')
+                ->withCount(['activeDepartureEvents as departed_count'])
+                ->orderByRaw('CAST(sequence_number AS UNSIGNED)')
+                ->orderBy('sequence_number')
+                ->get();
         $date = $validated['date'] ?? null;
         $scheduleOnly = (bool) ($validated['schedule'] ?? false);
         $search = trim($validated['search'] ?? '');
@@ -187,6 +190,7 @@ class QueueController extends Controller
             'مۆدێلی بارھەڵگر',
             'ڕەنگی بارھەڵگر',
             'دۆخ',
+            'ژمارەی ڕۆیشتن',
             'بەرواری دیاریکراو',
             'کاتی دیاریکراو',
             'تێبینی',
@@ -214,6 +218,7 @@ class QueueController extends Controller
                 $tanker->truck_model,
                 $tanker->truck_color,
                 $statusLabels[$status] ?? $status,
+                (int) ($tanker->departed_count ?? 0),
                 $queue?->scheduled_date
                     ? Carbon::parse($queue->scheduled_date)->format('Y-m-d')
                     : null,
@@ -230,7 +235,7 @@ class QueueController extends Controller
             $rows[] = $row;
         }
 
-        $widths = [11, 18, 24, 17, 24, 18, 16, 16, 14, 18, 17, 30, 13, 23];
+        $widths = [11, 18, 24, 17, 24, 18, 16, 16, 14, 14, 18, 17, 30, 13, 23];
         if ($isNumberedExport) {
             array_unshift($widths, 8);
         }
@@ -350,33 +355,12 @@ class QueueController extends Controller
             'note' => 'nullable|string',
         ]);
 
-        $dataToUpdate = [
-            'driver_id' => null,
-            'status' => $validated['status'],
-            'status_updated_at' => now(),
-            'gatekeeper_id' => auth()->id(),
-        ];
-
-        if ($validated['status'] === 'departed') {
-            $departedAt = now('Asia/Baghdad');
-            $dataToUpdate['scheduled_date'] = $departedAt->toDateString();
-            $dataToUpdate['scheduled_time'] = $departedAt->format('H:i');
-        } elseif ($validated['status'] === 'red') {
-            $dataToUpdate['scheduled_date'] = null;
-            $dataToUpdate['scheduled_time'] = null;
-        } else {
-            if ($request->has('scheduled_date')) {
-                $dataToUpdate['scheduled_date'] = $request->scheduled_date;
-            }
-            if ($request->has('scheduled_time')) {
-                $dataToUpdate['scheduled_time'] = $request->scheduled_time;
-            }
-        }
-
-        $queue = Queue::updateOrCreate(
-            ['tanker_id' => $tanker->id],
-            $dataToUpdate
-        );
+        $queue = DB::transaction(fn () => $this->saveStatus(
+            $tanker,
+            $validated,
+            auth()->id(),
+            now(),
+        ), 3);
 
         return response()->json([
             'success' => true,
@@ -384,6 +368,7 @@ class QueueController extends Controller
             'scheduled_date' => $queue->scheduled_date,
             'scheduled_time' => $queue->scheduled_time,
             'status_updated_at' => $queue->status_updated_at?->toIso8601String(),
+            'departed_count' => $tanker->activeDepartureEvents()->count(),
         ]);
     }
 
@@ -477,7 +462,14 @@ class QueueController extends Controller
 
                 if ($operation['type'] === 'status') {
                     abort_unless($request->user()->can('update queue status'), 403);
-                    $this->applyStatusOperation($tanker, $operation['payload'], $request->user()->id);
+                    $this->applyStatusOperation(
+                        $tanker,
+                        $operation['payload'],
+                        $request->user()->id,
+                        isset($operation['client_created_at'])
+                            ? Carbon::parse($operation['client_created_at'])
+                            : now(),
+                    );
                 } else {
                     abort_unless($request->user()->can('update queue notes'), 403);
                     $this->applyNoteOperation($tanker, $operation['payload'], $request->user()->id);
@@ -517,8 +509,10 @@ class QueueController extends Controller
                 // Lock the current queue snapshot so the PDF and reset describe
                 // exactly the same records.
                 Queue::query()->lockForUpdate()->get();
+                QueueStatusEvent::query()->whereNull('queue_archive_id')->lockForUpdate()->get();
 
                 $tankers = Tanker::with('latestQueue')
+                    ->withCount(['activeDepartureEvents as departed_count'])
                     ->orderByRaw('CAST(sequence_number AS UNSIGNED)')
                     ->orderBy('sequence_number')
                     ->lockForUpdate()
@@ -551,6 +545,10 @@ class QueueController extends Controller
                     ];
                 })->all());
 
+                QueueStatusEvent::query()
+                    ->whereNull('queue_archive_id')
+                    ->update(['queue_archive_id' => $archive->id]);
+
                 $pdf = Pdf::loadView('pdf.queue_report', [
                     'tankers' => $tankers,
                     'generatedAt' => $generatedAt,
@@ -559,7 +557,7 @@ class QueueController extends Controller
                     'title' => 'کەمپی حەسیرە - ڕاپۆرتی مانگانە',
                     'format' => 'A4-L',
                     'orientation' => 'L',
-                    'default_font' => 'notosansarabic',
+                    'default_font' => 'kjino',
                     'default_font_size' => 10,
                     'margin_left' => 10,
                     'margin_right' => 10,
@@ -567,9 +565,9 @@ class QueueController extends Controller
                     'margin_bottom' => 13,
                     'custom_font_dir' => public_path('fonts'),
                     'custom_font_data' => [
-                        'notosansarabic' => [
-                            'R' => 'NotoSansArabic-Regular.ttf',
-                            'B' => 'NotoSansArabic-Bold.ttf',
+                        'kjino' => [
+                            'R' => 'KJino.TTF',
+                            'B' => 'KJino.TTF',
                             'useOTL' => 0xFF,
                             'useKashida' => 75,
                         ],
@@ -605,17 +603,24 @@ class QueueController extends Controller
         ]);
     }
 
-    private function applyStatusOperation(Tanker $tanker, array $payload, int $gatekeeperId): void
+    private function applyStatusOperation(Tanker $tanker, array $payload, int $gatekeeperId, Carbon $occurredAt): void
     {
+        $this->saveStatus($tanker, $payload, $gatekeeperId, $occurredAt);
+    }
+
+    private function saveStatus(Tanker $tanker, array $payload, int $gatekeeperId, Carbon $occurredAt): Queue
+    {
+        $queue = Queue::query()->where('tanker_id', $tanker->id)->lockForUpdate()->first();
+        $previousStatus = $queue?->status ?? 'pending';
         $data = [
             'driver_id' => null,
             'status' => $payload['status'],
-            'status_updated_at' => now(),
+            'status_updated_at' => $occurredAt,
             'gatekeeper_id' => $gatekeeperId,
         ];
 
         if ($payload['status'] === 'departed') {
-            $departedAt = now('Asia/Baghdad');
+            $departedAt = $occurredAt->copy()->timezone('Asia/Baghdad');
             $data['scheduled_date'] = $departedAt->toDateString();
             $data['scheduled_time'] = $departedAt->format('H:i');
         } elseif ($payload['status'] === 'red') {
@@ -631,7 +636,32 @@ class QueueController extends Controller
             }
         }
 
-        Queue::updateOrCreate(['tanker_id' => $tanker->id], $data);
+        $queue = Queue::updateOrCreate(['tanker_id' => $tanker->id], $data);
+
+        if ($payload['status'] === 'pending') {
+            if ($previousStatus !== 'pending') {
+                QueueStatusEvent::query()
+                    ->whereNull('queue_archive_id')
+                    ->where('tanker_id', $tanker->id)
+                    ->where('status', $previousStatus)
+                    ->latest('id')
+                    ->limit(1)
+                    ->delete();
+            }
+
+            return $queue;
+        }
+
+        QueueStatusEvent::create([
+            'tanker_id' => $tanker->id,
+            'gatekeeper_id' => $gatekeeperId,
+            'status' => $queue->status,
+            'scheduled_date' => $queue->scheduled_date,
+            'scheduled_time' => $queue->scheduled_time,
+            'occurred_at' => $occurredAt,
+        ]);
+
+        return $queue;
     }
 
     private function applyNoteOperation(Tanker $tanker, array $payload, int $gatekeeperId): void
@@ -646,53 +676,124 @@ class QueueController extends Controller
         );
     }
 
+    /**
+     * Return one display row for every status occurrence in the active reset cycle.
+     * A synthesized row keeps records created outside the gatekeeper endpoints visible.
+     */
+    private function activeStatusTankers(string $status)
+    {
+        $eventTankers = QueueStatusEvent::query()
+            ->with(['tanker' => fn ($query) => $query
+                ->with('latestQueue')
+                ->withCount(['activeDepartureEvents as departed_count'])])
+            ->whereNull('queue_archive_id')
+            ->where('status', $status)
+            ->orderBy('occurred_at')
+            ->orderBy('id')
+            ->get()
+            ->filter(fn (QueueStatusEvent $event) => $event->tanker !== null)
+            ->map(function (QueueStatusEvent $event) {
+                $tanker = clone $event->tanker;
+                $currentQueue = $event->tanker->latestQueue;
+                $displayQueue = new Queue([
+                    'status' => $event->status,
+                    'scheduled_date' => $event->scheduled_date?->format('Y-m-d'),
+                    'scheduled_time' => $event->scheduled_time,
+                    'note' => $currentQueue?->note,
+                    'status_updated_at' => $event->occurred_at,
+                ]);
+                $displayQueue->id = $currentQueue?->id;
+                $displayQueue->updated_at = $event->occurred_at;
+
+                $tanker->setRelation('latestQueue', $displayQueue);
+                $tanker->setAttribute('status_event_id', $event->id);
+                $tanker->setAttribute('current_status', $currentQueue?->status ?? 'pending');
+
+                return $tanker;
+            });
+
+        $legacyTankers = Tanker::query()
+            ->with('latestQueue')
+            ->withCount(['activeDepartureEvents as departed_count'])
+            ->whereHas('latestQueue', fn ($query) => $query->where('status', $status))
+            ->whereDoesntHave('queueStatusEvents', fn ($query) => $query
+                ->whereNull('queue_archive_id')
+                ->where('status', $status))
+            ->orderByRaw('CAST(sequence_number AS UNSIGNED)')
+            ->orderBy('sequence_number')
+            ->get()
+            ->each(function (Tanker $tanker) {
+                $tanker->setAttribute('status_event_id', null);
+                $tanker->setAttribute('current_status', $tanker->latestQueue?->status ?? 'pending');
+            });
+
+        return $eventTankers->concat($legacyTankers)->values();
+    }
+
+    private function serializeTanker(Tanker $tanker): array
+    {
+        $queue = $tanker->latestQueue;
+
+        return [
+            'id' => $tanker->id,
+            'row_key' => $tanker->getAttribute('status_event_id')
+                ? 'status-event-'.$tanker->getAttribute('status_event_id')
+                : 'tanker-'.$tanker->id,
+            'current_status' => $tanker->getAttribute('current_status') ?? $queue?->status ?? 'pending',
+            'departed_count' => (int) ($tanker->getAttribute('departed_count') ?? 0),
+            'created_at' => $tanker->created_at?->toIso8601String(),
+            'blocked_at' => $tanker->blocked_at?->toIso8601String(),
+            'sequence_number' => $tanker->sequence_number,
+            'sequence_owner' => $tanker->sequence_owner,
+            'sequence_owner_phone' => $tanker->sequence_owner_phone,
+            'plate_number' => $tanker->plate_number,
+            'vin' => $tanker->vin,
+            'truck_type' => $tanker->truck_type,
+            'truck_model' => $tanker->truck_model,
+            'truck_color' => $tanker->truck_color,
+            'queue' => $queue ? [
+                'status' => $queue->status,
+                'scheduled_date' => $queue->scheduled_date,
+                'scheduled_time' => $queue->scheduled_time,
+                'note' => $queue->note,
+                'status_updated_at' => ($queue->status_updated_at ?? $queue->updated_at)?->toIso8601String(),
+                'updated_at' => $queue->updated_at?->toIso8601String(),
+            ] : [
+                'status' => 'pending',
+                'scheduled_date' => null,
+                'scheduled_time' => null,
+                'note' => null,
+                'status_updated_at' => null,
+                'updated_at' => null,
+            ],
+        ];
+    }
+
     private function snapshot(?string $status = null): array
     {
+        if ($status !== null) {
+            $tankers = $this->activeStatusTankers($status);
+
+            if ($status === 'yellow') {
+                $tankers = $tankers->sortBy(fn (Tanker $tanker) => ($tanker->latestQueue?->status_updated_at ?? $tanker->latestQueue?->updated_at)?->getTimestamp()
+                        ?? PHP_INT_MAX
+                )->values();
+            }
+
+            return [
+                'tankers' => $tankers->map(fn (Tanker $tanker) => $this->serializeTanker($tanker))->values(),
+                'synced_at' => now()->toIso8601String(),
+            ];
+        }
+
         $tankers = Tanker::with('latestQueue')
+            ->withCount(['activeDepartureEvents as departed_count'])
             ->orderByRaw('CAST(sequence_number AS UNSIGNED)')
             ->orderBy('sequence_number')
             ->get();
 
-        if ($status === 'yellow') {
-            $tankers = $tankers->sortBy(function (Tanker $tanker) {
-                if ($tanker->latestQueue?->status !== 'yellow') {
-                    return PHP_INT_MAX;
-                }
-
-                return ($tanker->latestQueue->status_updated_at ?? $tanker->latestQueue->updated_at)?->getTimestamp()
-                    ?? PHP_INT_MAX;
-            });
-        }
-
         return [
-            'tankers' => $tankers->map(fn (Tanker $tanker) => [
-                'id' => $tanker->id,
-                'created_at' => $tanker->created_at?->toIso8601String(),
-                'blocked_at' => $tanker->blocked_at?->toIso8601String(),
-                'sequence_number' => $tanker->sequence_number,
-                'sequence_owner' => $tanker->sequence_owner,
-                'sequence_owner_phone' => $tanker->sequence_owner_phone,
-                'plate_number' => $tanker->plate_number,
-                'vin' => $tanker->vin,
-                'truck_type' => $tanker->truck_type,
-                'truck_model' => $tanker->truck_model,
-                'truck_color' => $tanker->truck_color,
-                'queue' => $tanker->latestQueue ? [
-                    'status' => $tanker->latestQueue->status,
-                    'scheduled_date' => $tanker->latestQueue->scheduled_date,
-                    'scheduled_time' => $tanker->latestQueue->scheduled_time,
-                    'note' => $tanker->latestQueue->note,
-                    'status_updated_at' => ($tanker->latestQueue->status_updated_at ?? $tanker->latestQueue->updated_at)?->toIso8601String(),
-                    'updated_at' => $tanker->latestQueue->updated_at?->toIso8601String(),
-                ] : [
-                    'status' => 'pending',
-                    'scheduled_date' => null,
-                    'scheduled_time' => null,
-                    'note' => null,
-                    'status_updated_at' => null,
-                    'updated_at' => null,
-                ],
-            ])->values(),
+            'tankers' => $tankers->map(fn (Tanker $tanker) => $this->serializeTanker($tanker))->values(),
             'synced_at' => now()->toIso8601String(),
         ];
     }

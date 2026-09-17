@@ -158,6 +158,10 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
             return tanker?.queue?.status || 'pending';
         },
 
+        getCurrentStatus(tanker) {
+            return tanker?.current_status || this.getStatus(tanker);
+        },
+
         getStatusLabel(tanker) {
             if (this.getStatus(tanker) === 'green') return 'هاتن';
             if (this.getStatus(tanker) === 'yellow') return 'دواخستن';
@@ -271,11 +275,17 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
             const payload = { status, ...extraData };
             const result = await this.send(`/gatekeeper/queue/${encodeURIComponent(tankerId)}`, payload);
             if (result) {
+                if (this.statusFilter) {
+                    window.location.reload();
+                    return result;
+                }
+
                 this.applyChange('status', tankerId, {
                     ...payload,
                     scheduled_date: result.scheduled_date,
                     scheduled_time: result.scheduled_time,
                     status_updated_at: result.status_updated_at,
+                    departed_count: result.departed_count,
                 });
             }
             return result;
@@ -306,8 +316,9 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
                 'PATCH',
             );
             if (result) {
-                tanker.sequence_owner_phone = result.sequence_owner_phone;
-                this.tankers = [...this.tankers];
+                this.tankers = this.tankers.map(item => Number(item.id) === Number(tanker.id)
+                    ? { ...item, sequence_owner_phone: result.sequence_owner_phone }
+                    : item);
             }
         },
 
@@ -321,8 +332,9 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
                 blocked ? 'PATCH' : 'DELETE',
             );
             if (result) {
-                tanker.blocked_at = result.blocked_at;
-                this.tankers = [...this.tankers];
+                this.tankers = this.tankers.map(item => Number(item.id) === Number(tanker.id)
+                    ? { ...item, blocked_at: result.blocked_at }
+                    : item);
                 this.closeActionsModal();
             }
         },
@@ -353,20 +365,27 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
         },
 
         applyChange(type, tankerId, payload) {
-            const index = this.tankers.findIndex(tanker => Number(tanker.id) === Number(tankerId));
-            if (index === -1) return;
+            this.tankers = this.tankers.map(tanker => {
+                if (Number(tanker.id) !== Number(tankerId)) return tanker;
 
-            const tanker = this.tankers[index];
-            const queue = normalizedQueue(tanker.queue);
+                const queue = normalizedQueue(tanker.queue);
+                if (type === 'status') {
+                    const queuePayload = { ...payload };
+                    delete queuePayload.departed_count;
+                    Object.assign(queue, queuePayload);
+                } else {
+                    queue.note = payload.note || '';
+                }
 
-            if (type === 'status') {
-                Object.assign(queue, payload);
-            } else {
-                queue.note = payload.note || '';
-            }
-
-            this.tankers[index] = { ...tanker, queue };
-            this.tankers = [...this.tankers];
+                return {
+                    ...tanker,
+                    current_status: type === 'status' ? payload.status : tanker.current_status,
+                    departed_count: type === 'status'
+                        ? payload.departed_count ?? tanker.departed_count ?? 0
+                        : tanker.departed_count,
+                    queue,
+                };
+            });
         },
 
         async resetQueue(form) {

@@ -30,6 +30,18 @@ class Tanker extends Model
         return $this->hasOne(Queue::class)->latestOfMany();
     }
 
+    public function queueStatusEvents()
+    {
+        return $this->hasMany(QueueStatusEvent::class);
+    }
+
+    public function activeDepartureEvents()
+    {
+        return $this->hasMany(QueueStatusEvent::class)
+            ->whereNull('queue_archive_id')
+            ->where('status', 'departed');
+    }
+
     public function ownershipTransfers()
     {
         return $this->hasMany(TankerTransfer::class)->orderByDesc('id');

@@ -1,10 +1,10 @@
 <div class="overflow-x-auto">
     <table class="w-full text-right border-collapse">
         <thead><tr class="border-b border-white/10 text-gray-400">
-            <th class="py-3 px-4 font-normal">ڕیزبەندی</th><th class="py-3 px-4 font-normal">ژمارەی تەنکەر</th><th class="py-3 px-4 font-normal">خاوەنی خەت</th><th class="py-3 px-4 font-normal">مۆبایل</th><th class="py-3 px-4 font-normal">بەروار</th><th class="py-3 px-4 font-normal">کات</th><th class="py-3 px-4 font-normal">تێبینی</th><th class="py-3 px-4 font-normal">کردارەکان</th>
+            <th class="py-3 px-4 font-normal">ڕیزبەندی</th><th class="py-3 px-4 font-normal">ژمارەی تەنکەر</th><th class="py-3 px-4 font-normal">خاوەنی خەت</th><th class="py-3 px-4 font-normal">مۆبایل</th><th class="py-3 px-4 font-normal">ژمارەی ڕۆیشتن</th><th class="py-3 px-4 font-normal">بەروار</th><th class="py-3 px-4 font-normal">کات</th><th class="py-3 px-4 font-normal">تێبینی</th><th class="py-3 px-4 font-normal">کردارەکان</th>
         </tr></thead>
         <tbody>
-            <template x-for="(tanker, index) in visibleTankers" :key="tanker.id">
+            <template x-for="(tanker, index) in visibleTankers" :key="tanker.row_key || tanker.id">
                 <tr class="border-b border-white/5 transition-colors" :class="[getRowClass(tanker), getScheduleDayDividerClass(index, tanker)]">
                     <td class="py-3 px-4" x-text="tanker.sequence_number || '-'"></td>
                     <td class="py-3 px-4 font-medium">
@@ -18,6 +18,7 @@
                         <span x-text="tanker.sequence_owner_phone || '-'"></span>
                         @endcan
                     </td>
+                    <td class="py-3 px-4 text-center"><span class="inline-flex min-w-8 justify-center rounded-full bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-700" x-text="tanker.departed_count || 0"></span></td>
                     <td class="whitespace-nowrap py-3 px-4" x-text="getScheduledDateLabel(tanker)"></td><td class="py-3 px-4" x-text="tanker.queue?.scheduled_time || '-'"></td>
                     <td class="py-3 px-4">
                         @can('update queue notes')
@@ -35,7 +36,7 @@
                     </td>
                 </tr>
             </template>
-            <tr x-cloak x-show="visibleTankers.length === 0"><td colspan="8" class="py-10 text-center text-slate-500">هیچ داتایەک نەدۆزرایەوە.</td></tr>
+            <tr x-cloak x-show="visibleTankers.length === 0"><td colspan="9" class="py-10 text-center text-slate-500">هیچ داتایەک نەدۆزرایەوە.</td></tr>
         </tbody>
     </table>
 </div>
@@ -52,10 +53,10 @@
 
         @can('update queue status')
         <div x-cloak x-show="actionsTanker && !isBlocked(actionsTanker)" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <button type="button" @click="getStatus(actionsTanker) === 'green' ? revertStatus(actionsTanker.id) : openScheduleModal(actionsTanker.id, 'green'); closeActionsModal()" class="rounded-lg border px-4 py-3 text-sm font-bold transition" :class="getStatus(actionsTanker) === 'green' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'">هاتن</button>
-            <button type="button" @click="getStatus(actionsTanker) === 'yellow' ? revertStatus(actionsTanker.id) : openScheduleModal(actionsTanker.id, 'yellow'); closeActionsModal()" class="rounded-lg border px-4 py-3 text-sm font-bold transition" :class="getStatus(actionsTanker) === 'yellow' ? 'bg-amber-500 border-amber-500 text-white' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'">دواخستن</button>
-            <button type="button" @click="getStatus(actionsTanker) === 'red' ? revertStatus(actionsTanker.id) : updateStatus(actionsTanker.id, 'red'); closeActionsModal()" class="rounded-lg border px-4 py-3 text-sm font-bold transition" :class="getStatus(actionsTanker) === 'red' ? 'bg-rose-600 border-rose-600 text-white' : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'">نەهاتن</button>
-            <button type="button" @click="getStatus(actionsTanker) === 'departed' ? revertStatus(actionsTanker.id) : updateStatus(actionsTanker.id, 'departed'); closeActionsModal()" class="rounded-lg border px-4 py-3 text-sm font-bold transition" :class="getStatus(actionsTanker) === 'departed' ? 'bg-sky-600 border-sky-600 text-white' : 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100'">ڕۆیشتن</button>
+            <button type="button" @click="getCurrentStatus(actionsTanker) === 'green' ? revertStatus(actionsTanker.id) : openScheduleModal(actionsTanker.id, 'green'); closeActionsModal()" class="rounded-lg border px-4 py-3 text-sm font-bold transition" :class="getCurrentStatus(actionsTanker) === 'green' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'">هاتن</button>
+            <button type="button" @click="getCurrentStatus(actionsTanker) === 'yellow' ? revertStatus(actionsTanker.id) : openScheduleModal(actionsTanker.id, 'yellow'); closeActionsModal()" class="rounded-lg border px-4 py-3 text-sm font-bold transition" :class="getCurrentStatus(actionsTanker) === 'yellow' ? 'bg-amber-500 border-amber-500 text-white' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'">دواخستن</button>
+            <button type="button" @click="getCurrentStatus(actionsTanker) === 'red' ? revertStatus(actionsTanker.id) : updateStatus(actionsTanker.id, 'red'); closeActionsModal()" class="rounded-lg border px-4 py-3 text-sm font-bold transition" :class="getCurrentStatus(actionsTanker) === 'red' ? 'bg-rose-600 border-rose-600 text-white' : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'">نەهاتن</button>
+            <button type="button" @click="getCurrentStatus(actionsTanker) === 'departed' ? revertStatus(actionsTanker.id) : updateStatus(actionsTanker.id, 'departed'); closeActionsModal()" class="rounded-lg border px-4 py-3 text-sm font-bold transition" :class="getCurrentStatus(actionsTanker) === 'departed' ? 'bg-sky-600 border-sky-600 text-white' : 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100'">ڕۆیشتن</button>
         </div>
         @endcan
 
