@@ -216,6 +216,8 @@ it('renders the dated schedule page and links it from the sidebar', function () 
         ->assertSee("dateFilter: '2026-09-02'", false)
         ->assertSee('getStatusLabel(tanker)', false)
         ->assertSee('getScheduleRowClass(tanker)', false)
+        ->assertSee('ژمارەی ڕۆیشتن')
+        ->assertSee('tanker.departed_count || 0', false)
         ->assertSee(route('gatekeeper.schedule'), false);
 });
 
@@ -230,6 +232,7 @@ it('includes trucks departed on the selected day in todays list and offers both 
         ->assertOk()
         ->assertSee('TEST-100', false)
         ->assertSee('\u0022status\u0022:\u0022departed\u0022', false)
+        ->assertSee('\u0022departed_count\u0022:1', false)
         ->assertSee('بەپێی ژمارەی ڕیزبەندی')
         ->assertSee('لە نوێوە بۆ کۆن')
         ->assertSee('لە کۆنەوە بۆ نوێ')

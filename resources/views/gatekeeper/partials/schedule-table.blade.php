@@ -6,6 +6,7 @@
                 <th class="py-3 px-4 font-normal">ژمارەی تەنکەر</th>
                 <th class="py-3 px-4 font-normal">خاوەنی خەت</th>
                 <th class="py-3 px-4 font-normal">مۆبایل</th>
+                <th class="py-3 px-4 font-normal">ژمارەی ڕۆیشتن</th>
                 <th class="py-3 px-4 font-normal">بەروار</th>
                 <th class="py-3 px-4 font-normal">کات</th>
                 <th class="py-3 px-4 font-normal">دۆخ</th>
@@ -18,12 +19,13 @@
                     <td class="py-3 px-4 font-medium" x-text="tanker.plate_number || '-'"></td>
                     <td class="py-3 px-4" x-text="tanker.sequence_owner || '-'"></td>
                     <td class="py-3 px-4" x-text="tanker.sequence_owner_phone || '-'"></td>
+                    <td class="py-3 px-4 text-center"><span class="inline-flex min-w-8 justify-center rounded-full bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-700" x-text="tanker.departed_count || 0"></span></td>
                     <td class="py-3 px-4" x-text="tanker.queue?.scheduled_date || '-'"></td>
                     <td class="py-3 px-4" x-text="tanker.queue?.scheduled_time || '-'"></td>
                     <td class="py-3 px-4 font-bold" x-text="getStatusLabel(tanker)"></td>
                 </tr>
             </template>
-            <tr x-cloak x-show="visibleTankers.length === 0"><td colspan="7" class="py-10 text-center text-slate-500">هیچ خەتێک بۆ ئەم بەروارە دیاری نەکراوە.</td></tr>
+            <tr x-cloak x-show="visibleTankers.length === 0"><td colspan="8" class="py-10 text-center text-slate-500">هیچ خەتێک بۆ ئەم بەروارە دیاری نەکراوە.</td></tr>
         </tbody>
     </table>
 </div>
