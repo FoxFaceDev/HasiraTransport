@@ -73,6 +73,9 @@ it('exports the complete gatekeeper table as a right-to-left Excel workbook', fu
 
     expect($sheet)
         ->toContain('rightToLeft="1"')
+        ->toContain('<c r="A1" s="1" t="inlineStr"><is><t xml:space="preserve">ژمارە</t>')
+        ->toContain('<c r="B1" s="1" t="inlineStr"><is><t xml:space="preserve">کۆدی حەسیرە</t>')
+        ->toContain('<c r="A2" s="2" t="inlineStr"><is><t xml:space="preserve">1</t>')
         ->toContain('TEST-100')
         ->toContain('VIN-OFFLINE-1')
         ->toContain('دواخراو')
@@ -80,7 +83,7 @@ it('exports the complete gatekeeper table as a right-to-left Excel workbook', fu
         ->and($workbook)->toContain('کۆنترۆڵی دەروازە');
 });
 
-it('adds automatic row numbers and renames the ranking column in departed exports', function () {
+it('keeps automatic row numbers and the Hasira code in filtered exports', function () {
     Queue::create([
         'tanker_id' => $this->tanker->id,
         'gatekeeper_id' => $this->gatekeeper->id,
@@ -158,17 +161,17 @@ it('does not advertise or render offline queue controls', function () {
         ->assertDontSee('داتای ئۆفلاین ئامادە دەکرێت...');
 });
 
-it('uses the ranking label throughout the gatekeeper tables and monthly PDF', function () {
+it('uses the Hasira code label in gatekeeper lists while preserving the monthly PDF label', function () {
     $this->actingAs($this->gatekeeper)
         ->get(route('gatekeeper.index'))
         ->assertOk()
-        ->assertSee('ڕیزبەندی')
+        ->assertSee('کۆدی حەسیرە')
         ->assertDontSee('زنجیرە');
 
     $this->actingAs($this->gatekeeper)
         ->get(route('gatekeeper.schedule', ['date' => '2026-09-02']))
         ->assertOk()
-        ->assertSee('ڕیزبەندی')
+        ->assertSee('کۆدی حەسیرە')
         ->assertDontSee('زنجیرە');
 
     $this->tanker->setAttribute('departed_count', 3);
@@ -233,7 +236,7 @@ it('includes trucks departed on the selected day in todays list and offers both 
         ->assertSee('TEST-100', false)
         ->assertSee('\u0022status\u0022:\u0022departed\u0022', false)
         ->assertSee('\u0022departed_count\u0022:1', false)
-        ->assertSee('بەپێی ژمارەی ڕیزبەندی')
+        ->assertSee('بەپێی کۆدی حەسیرە')
         ->assertSee('لە نوێوە بۆ کۆن')
         ->assertSee('لە کۆنەوە بۆ نوێ')
         ->assertSee(':href="exportUrl"', false);
@@ -248,7 +251,7 @@ it('shows the sorting choices on the main and every status list', function (stri
         ->get($route)
         ->assertOk()
         ->assertSee('x-model="sortMode"', false)
-        ->assertSee('بەپێی ژمارەی ڕیزبەندی')
+        ->assertSee('بەپێی کۆدی حەسیرە')
         ->assertSee('لە نوێوە بۆ کۆن')
         ->assertSee('لە کۆنەوە بۆ نوێ')
         ->assertSee(':href="exportUrl"', false);

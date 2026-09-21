@@ -13,20 +13,27 @@
 <body
     x-data="{
         sidebarCollapsed: false,
+        mobileSidebarOpen: false,
         init() {
             const savedPreference = localStorage.getItem('sidebar-collapsed');
             this.sidebarCollapsed = window.innerWidth > 900 && (savedPreference === null ? window.innerWidth < 1536 : savedPreference === 'true');
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 900) this.mobileSidebarOpen = false;
+            });
         },
         toggleSidebar() {
             this.sidebarCollapsed = !this.sidebarCollapsed;
             localStorage.setItem('sidebar-collapsed', String(this.sidebarCollapsed));
         }
     }"
+    :class="{ 'mobile-menu-open': mobileSidebarOpen }"
     class="app-shell font-sans antialiased min-h-screen flex text-sm overflow-x-hidden"
 >
     <x-operation-notification />
 
-    <aside :class="sidebarCollapsed ? 'is-collapsed w-20' : 'w-64'" class="app-sidebar flex-shrink-0 m-4 flex flex-col h-[calc(100vh-2rem)]">
+    <button x-cloak x-show="mobileSidebarOpen" x-transition.opacity type="button" class="mobile-sidebar-backdrop" aria-label="داخستنی لیست" @click="mobileSidebarOpen = false"></button>
+
+    <aside :class="{ 'is-collapsed w-20': sidebarCollapsed && !mobileSidebarOpen, 'w-64': !sidebarCollapsed || mobileSidebarOpen, 'is-mobile-open': mobileSidebarOpen }" @click="if ($event.target.closest('a')) mobileSidebarOpen = false" class="app-sidebar flex-shrink-0 m-4 flex flex-col h-[calc(100vh-2rem)]">
         <div class="sidebar-header p-5 flex items-center gap-3 border-b border-slate-100">
             <div class="brand-mark w-11 h-11 shrink-0 flex items-center justify-center text-white">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -39,6 +46,9 @@
             </div>
             <button type="button" @click="toggleSidebar()" class="sidebar-toggle" :title="sidebarCollapsed ? 'کردنەوەی لیست' : 'داخستنی لیست'" :aria-label="sidebarCollapsed ? 'کردنەوەی لیست' : 'داخستنی لیست'">
                 <svg class="h-4 w-4 transition-transform" :class="{ 'rotate-180': sidebarCollapsed }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18 6-6-6-6"/></svg>
+            </button>
+            <button type="button" @click="mobileSidebarOpen = false" class="mobile-sidebar-close" aria-label="داخستنی لیست">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12"/></svg>
             </button>
         </div>
 
@@ -148,6 +158,9 @@
     <main class="app-main min-w-0 flex-1 flex flex-col h-screen overflow-y-auto p-3 relative">
         <header class="app-topbar flex justify-between items-center mb-3 px-4 py-2">
             <div class="flex items-center gap-3">
+                <button type="button" @click="mobileSidebarOpen = true" class="mobile-menu-button" aria-label="کردنەوەی لیست" :aria-expanded="mobileSidebarOpen.toString()">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
                 <div class="user-avatar w-8 h-8 rounded-lg flex items-center justify-center">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm4 14a7 7 0 0 0-14 0"/></svg>
                 </div>

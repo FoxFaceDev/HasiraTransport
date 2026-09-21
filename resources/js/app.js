@@ -53,7 +53,7 @@ function sizeTableColumns(table) {
         const label = header.textContent.replace(/\s+/g, ' ').trim();
         let columnClass = null;
 
-        if (label === '#' || label === 'ڕیزبەندی') {
+        if (label === '#' || label === 'ڕیزبەندی' || label === 'کۆدی حەسیرە') {
             columnClass = 'table-col-rank';
         } else if (label.includes('تابلۆ') || label.includes('تەنکەر')) {
             columnClass = 'table-col-plate';

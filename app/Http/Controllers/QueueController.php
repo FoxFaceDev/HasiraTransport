@@ -179,9 +179,8 @@ class QueueController extends Controller
             })->values();
         }
 
-        $isNumberedExport = $scheduleOnly || ($status === 'departed' && ! $scheduleOnly);
         $headers = [
-            'ڕیزبەندی',
+            'کۆدی حەسیرە',
             'ژمارەی تەنکەر',
             'خاوەنی خەت',
             'مۆبایل',
@@ -198,10 +197,7 @@ class QueueController extends Controller
             'دوایین نوێکردنەوەی دۆخ',
         ];
 
-        if ($isNumberedExport) {
-            $headers[0] = 'کۆدی حەسیرە';
-            array_unshift($headers, 'ژمارە');
-        }
+        array_unshift($headers, 'ژمارە');
 
         $rows = [$headers];
 
@@ -228,17 +224,13 @@ class QueueController extends Controller
                 $queue?->updated_at?->timezone('Asia/Baghdad')->format('Y-m-d H:i:s'),
             ];
 
-            if ($isNumberedExport) {
-                array_unshift($row, $index + 1);
-            }
+            array_unshift($row, $index + 1);
 
             $rows[] = $row;
         }
 
         $widths = [11, 18, 24, 17, 24, 18, 16, 16, 14, 14, 18, 17, 30, 13, 23];
-        if ($isNumberedExport) {
-            array_unshift($widths, 8);
-        }
+        array_unshift($widths, 8);
 
         $path = XlsxWriter::create('کۆنترۆڵی دەروازە', $rows, $widths);
         $fileName = 'gatekeeper_'.now('Asia/Baghdad')->format('Y_m_d_H_i_s').'.xlsx';
