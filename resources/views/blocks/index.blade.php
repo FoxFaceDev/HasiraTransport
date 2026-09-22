@@ -17,7 +17,10 @@
             rows.querySelectorAll('[data-block-search]').forEach((row) => {
                 const matches = query === '' || row.dataset.blockSearch.toLocaleLowerCase().includes(query);
                 row.style.display = matches ? '' : 'none';
-                if (matches) visibleRows++;
+                if (matches) {
+                    visibleRows++;
+                    row.querySelector('[data-row-number]').textContent = visibleRows;
+                }
             });
 
             if (isDriver) this.hasDriverResults = visibleRows > 0;
@@ -56,6 +59,7 @@
     <div x-show="activeTab === 'drivers'" class="overflow-x-auto">
         <table class="w-full text-right border-collapse">
             <thead><tr class="border-b border-white/10 text-gray-400">
+                <th class="table-row-number py-3 px-4 font-normal">ژمارە</th>
                 <th class="py-3 px-4 font-normal">ناوی شۆفێر</th>
                 <th class="py-3 px-4 font-normal">زانیاری</th>
                 <th class="py-3 px-4 font-normal">کاتی بلۆککردن</th>
@@ -64,6 +68,7 @@
             <tbody x-ref="driverBlockRows">
                 @foreach($drivers as $driver)
                 <tr data-block-search="{{ $driver->name }} {{ $driver->phone }} {{ $driver->license_number }} {{ $driver->certificate_number }}" class="border-b border-white/5 transition-colors hover:bg-white/5">
+                    <td class="table-row-number py-3 px-4 font-medium"><span data-row-number>{{ $loop->iteration }}</span></td>
                     <td class="py-3 px-4 font-medium">{{ $driver->name }}</td>
                     <td class="py-3 px-4 text-slate-600">{{ $driver->phone ?: '-' }} · {{ $driver->license_number ?: '-' }} · {{ $driver->tankers_count }} خەت</td>
                     <td class="py-3 px-4 text-slate-500">{{ $driver->blocked_at?->format('Y-m-d H:i') }}</td>
@@ -79,9 +84,9 @@
                 </tr>
                 @endforeach
                 @if($drivers->isEmpty())
-                <tr><td colspan="4" class="py-10 text-center text-slate-500">هیچ شۆفێرێکی بلۆککراو نییە.</td></tr>
+                <tr><td colspan="5" class="py-10 text-center text-slate-500">هیچ شۆفێرێکی بلۆککراو نییە.</td></tr>
                 @else
-                <tr x-cloak x-show="!hasDriverResults"><td colspan="4" class="py-10 text-center text-slate-500">هیچ شۆفێرێک نەدۆزرایەوە.</td></tr>
+                <tr x-cloak x-show="!hasDriverResults"><td colspan="5" class="py-10 text-center text-slate-500">هیچ شۆفێرێک نەدۆزرایەوە.</td></tr>
                 @endif
             </tbody>
         </table>
@@ -90,6 +95,7 @@
     <div x-cloak x-show="activeTab === 'tankers'" class="overflow-x-auto">
         <table class="w-full text-right border-collapse">
             <thead><tr class="border-b border-white/10 text-gray-400">
+                <th class="table-row-number py-3 px-4 font-normal">ژمارە</th>
                 <th class="py-3 px-4 font-normal">ژمارەی تابلۆ</th>
                 <th class="py-3 px-4 font-normal">خاوەنی خەت</th>
                 <th class="py-3 px-4 font-normal">مۆبایل</th>
@@ -100,6 +106,7 @@
             <tbody x-ref="tankerBlockRows">
                 @foreach($tankers as $tanker)
                 <tr data-block-search="{{ $tanker->sequence_number }} {{ $tanker->sequence_owner }} {{ $tanker->sequence_owner_phone }} {{ $tanker->plate_number }} {{ $tanker->vin }} {{ $tanker->truck_type }} {{ $tanker->truck_model }} {{ $tanker->truck_color }} {{ $tanker->driver?->name }}" class="border-b border-white/5 transition-colors hover:bg-white/5">
+                    <td class="table-row-number py-3 px-4 font-medium"><span data-row-number>{{ $loop->iteration }}</span></td>
                     <td class="py-3 px-4 font-medium">{{ $tanker->plate_number }}</td>
                     <td class="py-3 px-4">{{ $tanker->sequence_owner ?: '-' }}</td>
                     <td class="whitespace-nowrap py-3 px-4">{{ $tanker->sequence_owner_phone ?: '-' }}</td>
@@ -117,9 +124,9 @@
                 </tr>
                 @endforeach
                 @if($tankers->isEmpty())
-                <tr><td colspan="6" class="py-10 text-center text-slate-500">هیچ خەتێکی بلۆککراو نییە.</td></tr>
+                <tr><td colspan="7" class="py-10 text-center text-slate-500">هیچ خەتێکی بلۆککراو نییە.</td></tr>
                 @else
-                <tr x-cloak x-show="!hasTankerResults"><td colspan="6" class="py-10 text-center text-slate-500">هیچ خەتێک نەدۆزرایەوە.</td></tr>
+                <tr x-cloak x-show="!hasTankerResults"><td colspan="7" class="py-10 text-center text-slate-500">هیچ خەتێک نەدۆزرایەوە.</td></tr>
                 @endif
             </tbody>
         </table>

@@ -47,9 +47,9 @@
 
     <section class="grid gap-4 xl:grid-cols-5">
         <article class="glass-panel p-5 xl:col-span-2">
-            <div class="flex items-start justify-between gap-3"><div><h2 class="text-lg font-bold text-slate-900">دابەشبوونی دۆخی ئێستا</h2><p class="mt-1 text-xs text-slate-500">دۆخی نوێترین تۆماری هەر خەتێک</p></div><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{{ number_format(array_sum($statusCounts)) }} خەت</span></div>
+            <div class="flex items-start justify-between gap-3"><div><h2 class="text-lg font-bold text-slate-900">دابەشبوونی دۆخی ئێستا</h2><p class="mt-1 text-xs text-slate-500">دۆخە تۆمارکراوەکانی خولی ئێستا</p></div><span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{{ number_format(array_sum($statusCounts)) }} تۆمار</span></div>
             <div class="mt-5 grid items-center gap-5 sm:grid-cols-[10rem_1fr]">
-                <div class="dashboard-donut mx-auto" style="background: conic-gradient(#0284c7 0 {{ $departedStop }}%, #10b981 {{ $departedStop }}% {{ $greenStop }}%, #f59e0b {{ $greenStop }}% {{ $yellowStop }}%, #f43f5e {{ $yellowStop }}% {{ $redStop }}%, #94a3b8 {{ $redStop }}% 100%);"><div><strong>{{ number_format($totalTankers) }}</strong><span>هەموو</span></div></div>
+                <div class="dashboard-donut mx-auto" style="background: conic-gradient(#0284c7 0 {{ $departedStop }}%, #10b981 {{ $departedStop }}% {{ $greenStop }}%, #f59e0b {{ $greenStop }}% {{ $yellowStop }}%, #f43f5e {{ $yellowStop }}% {{ $redStop }}%, #94a3b8 {{ $redStop }}% 100%);"><div><strong>{{ number_format(array_sum($statusCounts)) }}</strong><span>هەموو</span></div></div>
                 <div class="space-y-2.5">
                     @foreach([['departed', 'bg-sky-600'], ['green', 'bg-emerald-500'], ['yellow', 'bg-amber-500'], ['red', 'bg-rose-500'], ['pending', 'bg-slate-400']] as [$status, $dotClass])
                     <div class="flex items-center justify-between gap-3 text-sm"><div class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full {{ $dotClass }}"></span><span class="text-slate-600">{{ $statusLabels[$status] }}</span></div><strong class="text-slate-900">{{ number_format($statusCounts[$status]) }}</strong></div>

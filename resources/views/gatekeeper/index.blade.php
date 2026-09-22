@@ -26,6 +26,6 @@
             @include('gatekeeper.partials.sort-control')
         </div>
     </div>
-    @include('gatekeeper.partials.queue-table')
+    @include('gatekeeper.partials.queue-table', ['showRowNumber' => false])
 </div>
 @endsection

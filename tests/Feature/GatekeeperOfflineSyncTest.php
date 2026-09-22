@@ -138,7 +138,23 @@ it('embeds the initial truck snapshot in the gatekeeper page', function () {
         ->assertDontSee('شەهادە')
         ->assertSee('isBlocked(actionsTanker)', false)
         ->assertSee('blocked-badge', false)
-        ->assertDontSee('<th class="py-3 px-4 font-normal">#</th>', false)
+        ->assertDontSee('<th class="table-row-number py-3 px-4 font-normal">ژمارە</th>', false)
+        ->assertDontSee('x-text="index + 1"', false);
+});
+
+it('shows row numbers only on the requested gatekeeper lists', function () {
+    foreach (['green', 'yellow', 'departed'] as $status) {
+        $this->actingAs($this->gatekeeper)
+            ->get(route('gatekeeper.filter', $status))
+            ->assertOk()
+            ->assertSee('<th class="table-row-number py-3 px-4 font-normal">ژمارە</th>', false)
+            ->assertSee('x-text="index + 1"', false);
+    }
+
+    $this->actingAs($this->gatekeeper)
+        ->get(route('gatekeeper.filter', 'red'))
+        ->assertOk()
+        ->assertDontSee('<th class="table-row-number py-3 px-4 font-normal">ژمارە</th>', false)
         ->assertDontSee('x-text="index + 1"', false);
 });
 

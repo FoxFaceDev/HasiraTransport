@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Queue;
 use App\Models\QueueArchiveItem;
+use App\Models\QueueStatusEvent;
 use App\Models\Tanker;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -25,18 +26,33 @@ class DashboardController extends Controller
 
         $totalTankers = Tanker::query()->count();
         $blockedTankers = Tanker::query()->whereNotNull('blocked_at')->count();
-        $queueCounts = Queue::query()
+        $activeEventCounts = QueueStatusEvent::query()
+            ->whereNull('queue_archive_id')
             ->selectRaw('status, COUNT(*) as aggregate')
             ->groupBy('status')
             ->pluck('aggregate', 'status')
             ->map(fn ($count) => (int) $count);
+        $tankersWithActiveEvents = QueueStatusEvent::query()
+            ->whereNull('queue_archive_id')
+            ->distinct()
+            ->pluck('tanker_id');
+        $legacyQueueCounts = Queue::query()
+            ->whereNotIn('tanker_id', $tankersWithActiveEvents)
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status')
+            ->map(fn ($count) => (int) $count);
+        $assignedTankers = Queue::query()
+            ->whereIn('status', ['green', 'yellow', 'red', 'departed'])
+            ->distinct('tanker_id')
+            ->count('tanker_id');
 
         $statusCounts = [
-            'pending' => max(0, $totalTankers - $queueCounts->sum()),
-            'green' => $queueCounts->get('green', 0),
-            'yellow' => $queueCounts->get('yellow', 0),
-            'red' => $queueCounts->get('red', 0),
-            'departed' => $queueCounts->get('departed', 0),
+            'pending' => max(0, $totalTankers - $assignedTankers),
+            'green' => $activeEventCounts->get('green', 0) + $legacyQueueCounts->get('green', 0),
+            'yellow' => $activeEventCounts->get('yellow', 0) + $legacyQueueCounts->get('yellow', 0),
+            'red' => $activeEventCounts->get('red', 0) + $legacyQueueCounts->get('red', 0),
+            'departed' => $activeEventCounts->get('departed', 0) + $legacyQueueCounts->get('departed', 0),
         ];
 
         $currentToday = Queue::query()
@@ -49,7 +65,7 @@ class DashboardController extends Controller
             ->whereIn('status', ['green', 'yellow', 'departed'])
             ->get();
 
-        $todayRecords = $this->uniqueTruckRecords(
+        $legacyTodayRecords = $this->uniqueTruckRecords(
             $currentToday->map(fn (Queue $queue) => [
                 'identity' => $queue->tanker_id ? 'tanker-'.$queue->tanker_id : 'plate-'.$queue->tanker?->plate_number,
                 'tanker_id' => $queue->tanker_id,
@@ -73,6 +89,32 @@ class DashboardController extends Controller
             ]))
         );
 
+        $todayEventRecords = QueueStatusEvent::query()
+            ->with('tanker:id,sequence_number,plate_number,sequence_owner')
+            ->whereDate('scheduled_date', $todayDate)
+            ->whereIn('status', ['green', 'yellow', 'departed'])
+            ->get()
+            ->map(fn (QueueStatusEvent $event) => [
+                'identity' => 'event-'.$event->id,
+                'truck_identity' => 'tanker-'.$event->tanker_id,
+                'tanker_id' => $event->tanker_id,
+                'sequence_number' => $event->tanker?->sequence_number,
+                'plate_number' => $event->tanker?->plate_number,
+                'sequence_owner' => $event->tanker?->sequence_owner,
+                'status' => $event->status,
+                'date' => $event->scheduled_date?->toDateString(),
+                'time' => $event->scheduled_time,
+                'changed_at' => $event->occurred_at,
+            ]);
+
+        $eventTruckIdentities = $todayEventRecords->pluck('truck_identity')->unique();
+        $todayRecords = $todayEventRecords
+            ->concat($legacyTodayRecords->reject(
+                fn (array $record) => $eventTruckIdentities->contains($record['identity'])
+            ))
+            ->sortByDesc(fn (array $record) => $record['changed_at']?->getTimestamp() ?? 0)
+            ->values();
+
         $departedTodayRecords = $todayRecords
             ->where('status', 'departed')
             ->sortByDesc(fn (array $record) => $record['changed_at']?->getTimestamp() ?? 0)
@@ -89,7 +131,7 @@ class DashboardController extends Controller
             'other' => $todayRecords->reject(fn (array $record) => str_starts_with((string) $record['time'], '5:30') || str_starts_with((string) $record['time'], '12:00'))->count(),
         ];
 
-        $departureRecords = Queue::query()
+        $legacyDepartureRecords = Queue::query()
             ->with('tanker:id,plate_number')
             ->where('status', 'departed')
             ->whereBetween('scheduled_date', [$weekStart->toDateString(), $weekEnd->toDateString()])
@@ -107,6 +149,25 @@ class DashboardController extends Controller
                     'identity' => $item->tanker_id ? 'tanker-'.$item->tanker_id : 'plate-'.$item->plate_number,
                 ]));
 
+        $departureEventRecords = QueueStatusEvent::query()
+            ->where('status', 'departed')
+            ->whereBetween('scheduled_date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+            ->get()
+            ->map(fn (QueueStatusEvent $event) => [
+                'date' => $event->scheduled_date?->toDateString(),
+                'identity' => 'event-'.$event->id,
+                'truck_identity' => 'tanker-'.$event->tanker_id,
+            ]);
+
+        $eventDateTruckKeys = $departureEventRecords
+            ->map(fn (array $record) => $record['date'].'|'.$record['truck_identity'])
+            ->unique();
+        $departureRecords = $departureEventRecords->concat(
+            $legacyDepartureRecords
+                ->unique(fn (array $record) => $record['date'].'|'.$record['identity'])
+                ->reject(fn (array $record) => $eventDateTruckKeys->contains($record['date'].'|'.$record['identity']))
+        );
+
         $departureTrend = collect(range(0, 6))->map(function (int $dayOffset) use ($weekStart, $departureRecords) {
             $date = $weekStart->copy()->addDays($dayOffset);
             $dateString = $date->toDateString();
@@ -116,7 +177,6 @@ class DashboardController extends Controller
                 'label' => $this->weekdayName($date),
                 'count' => $departureRecords
                     ->where('date', $dateString)
-                    ->unique('identity')
                     ->count(),
             ];
         });

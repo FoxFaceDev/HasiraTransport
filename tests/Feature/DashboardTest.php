@@ -2,8 +2,10 @@
 
 use App\Models\Queue;
 use App\Models\QueueArchive;
+use App\Models\QueueStatusEvent;
 use App\Models\Tanker;
 use App\Models\User;
+use Carbon\Carbon;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -11,7 +13,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
-    $this->travelTo(\Carbon\Carbon::parse('2026-09-16 15:00:00', 'Asia/Baghdad'));
+    $this->travelTo(Carbon::parse('2026-09-16 15:00:00', 'Asia/Baghdad'));
 
     $this->gatekeeper = User::factory()->create();
     $this->gatekeeper->assignRole('gatekeeper');
@@ -105,6 +107,43 @@ it('allows tanker viewers to use the dashboard', function () {
         ->get(route('dashboard'))
         ->assertOk()
         ->assertSee('هەموو خەتەکان');
+});
+
+it('counts every departure when the same truck departs more than once', function () {
+    $tanker = Tanker::create([
+        'sequence_number' => '20',
+        'sequence_owner' => 'Repeated departure owner',
+        'plate_number' => 'REPEAT-20',
+        'truck_type' => 'Tanker',
+    ]);
+    Queue::create([
+        'tanker_id' => $tanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'departed',
+        'scheduled_date' => '2026-09-16',
+        'scheduled_time' => '12:00',
+        'status_updated_at' => now(),
+    ]);
+
+    foreach (['10:00', '12:00'] as $time) {
+        QueueStatusEvent::create([
+            'tanker_id' => $tanker->id,
+            'gatekeeper_id' => $this->gatekeeper->id,
+            'status' => 'departed',
+            'scheduled_date' => '2026-09-16',
+            'scheduled_time' => $time,
+            'occurred_at' => now(),
+        ]);
+    }
+
+    $this->actingAs($this->gatekeeper)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertViewHas('departedToday', 2)
+        ->assertViewHas('scheduledToday', 2)
+        ->assertViewHas('statusCounts', fn ($counts) => $counts['departed'] === 2)
+        ->assertViewHas('departedTodayRecords', fn ($records) => $records->count() === 2)
+        ->assertViewHas('departureTrend', fn ($trend) => $trend->sum('count') === 2);
 });
 
 it('protects truck statistics from users without tanker or gatekeeper access', function () {

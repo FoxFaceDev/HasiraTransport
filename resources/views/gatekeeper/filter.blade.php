@@ -29,6 +29,6 @@
             @include('gatekeeper.partials.export-control')
         </div>
     </div>
-    @include('gatekeeper.partials.queue-table')
+    @include('gatekeeper.partials.queue-table', ['showRowNumber' => in_array($status, ['green', 'yellow', 'departed'], true)])
 </div>
 @endsection

@@ -44,6 +44,38 @@
 }
 
 @layer components {
+    .app-main table,
+    .app-main table th,
+    .app-main table td,
+    .app-main table th *,
+    .app-main table td * {
+        font-size: 0.6875rem !important;
+        line-height: 1rem;
+    }
+
+    .app-main table th,
+    .app-main table td {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+
+    .app-main table .table-row-number {
+        box-sizing: border-box;
+        max-width: 3.5rem;
+        min-width: 3.5rem;
+        text-align: center;
+        white-space: nowrap;
+        width: 3.5rem;
+    }
+
+    .app-main table .table-hasira-code {
+        box-sizing: border-box;
+        min-width: 7.5rem;
+        text-align: center;
+        white-space: nowrap;
+        width: 7.5rem;
+    }
+
     .app-shell {
         background:
             radial-gradient(circle at 88% 4%, rgba(191, 219, 254, 0.9), transparent 30rem),
@@ -57,6 +89,44 @@
         border-radius: 1.5rem;
         box-shadow: 0 18px 50px rgba(30, 55, 90, 0.13);
         transition: width 220ms ease;
+    }
+
+    .app-sidebar nav {
+        direction: ltr;
+        scrollbar-color: #9bb6d8 transparent;
+        scrollbar-gutter: stable;
+        scrollbar-width: thin;
+    }
+
+    .app-sidebar nav > * {
+        direction: rtl;
+    }
+
+    .app-sidebar nav::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .app-sidebar nav::-webkit-scrollbar-track {
+        background: transparent;
+        margin-bottom: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .app-sidebar nav::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #b8cbe3, #7fa3ce);
+        background-clip: padding-box;
+        border: 2px solid transparent;
+        border-radius: 9999px;
+        min-height: 2.5rem;
+    }
+
+    .app-sidebar nav::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, #8eacd2, #4f83c2);
+        background-clip: padding-box;
+    }
+
+    .app-sidebar nav::-webkit-scrollbar-corner {
+        background: transparent;
     }
 
     .sidebar-toggle {
