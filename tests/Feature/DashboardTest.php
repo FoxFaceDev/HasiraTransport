@@ -141,7 +141,7 @@ it('counts every departure when the same truck departs more than once', function
         ->assertOk()
         ->assertViewHas('departedToday', 2)
         ->assertViewHas('scheduledToday', 2)
-        ->assertViewHas('statusCounts', fn ($counts) => $counts['departed'] === 2)
+        ->assertViewHas('statusCounts', fn ($counts) => $counts['departed'] === 1)
         ->assertViewHas('departedTodayRecords', fn ($records) => $records->count() === 2)
         ->assertViewHas('departureTrend', fn ($trend) => $trend->sum('count') === 2);
 });

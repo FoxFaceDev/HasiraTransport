@@ -240,7 +240,7 @@ it('renders the dated schedule page and links it from the sidebar', function () 
         ->assertSee(route('gatekeeper.schedule'), false);
 });
 
-it('includes trucks departed on the selected day in todays list and offers both sorts', function () {
+it('includes trucks departed on the selected day and offers status sorting', function () {
     $this->travelTo(Carbon::parse('2026-09-16 14:30:00', 'Asia/Baghdad'));
 
     $this->actingAs($this->gatekeeper)
@@ -253,13 +253,58 @@ it('includes trucks departed on the selected day in todays list and offers both 
         ->assertSee('\u0022status\u0022:\u0022departed\u0022', false)
         ->assertSee('\u0022departed_count\u0022:1', false)
         ->assertSee('بەپێی کۆدی حەسیرە')
+        ->assertSee('<option value="status">هاتن، پاشان دواخراوە</option>', false)
         ->assertSee('لە نوێوە بۆ کۆن')
         ->assertSee('لە کۆنەوە بۆ نوێ')
         ->assertSee(':href="exportUrl"', false);
 
     expect(file_get_contents(resource_path('js/gatekeeper.js')))
         ->toContain("['green', 'yellow', 'departed']")
+        ->toContain("{ green: 0, yellow: 1, departed: 2 }")
         ->toContain("['newest', 'oldest'].includes(this.sortMode)");
+});
+
+it('exports todays list with arrived trucks before delayed and departed trucks', function () {
+    Queue::create([
+        'tanker_id' => $this->tanker->id,
+        'gatekeeper_id' => $this->gatekeeper->id,
+        'status' => 'yellow',
+        'scheduled_date' => '2026-09-16',
+        'scheduled_time' => '5:30 بەیانی',
+    ]);
+
+    foreach ([
+        ['sequence' => '13', 'plate' => 'ARRIVED-200', 'status' => 'green'],
+        ['sequence' => '14', 'plate' => 'DEPARTED-300', 'status' => 'departed'],
+    ] as $record) {
+        $tanker = Tanker::create([
+            'sequence_number' => $record['sequence'],
+            'sequence_owner' => 'Owner '.$record['sequence'],
+            'plate_number' => $record['plate'],
+            'truck_type' => 'Tanker',
+        ]);
+        Queue::create([
+            'tanker_id' => $tanker->id,
+            'gatekeeper_id' => $this->gatekeeper->id,
+            'status' => $record['status'],
+            'scheduled_date' => '2026-09-16',
+            'scheduled_time' => '12:00 نیوەڕۆ',
+        ]);
+    }
+
+    $response = $this->actingAs($this->gatekeeper)->get(route('gatekeeper.export', [
+        'schedule' => 1,
+        'date' => '2026-09-16',
+        'sort' => 'status',
+    ]))->assertOk();
+
+    $zip = new ZipArchive;
+    expect($zip->open($response->baseResponse->getFile()->getPathname()))->toBeTrue();
+    $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+    $zip->close();
+
+    expect(strpos($sheet, 'ARRIVED-200'))->toBeLessThan(strpos($sheet, 'TEST-100'))
+        ->and(strpos($sheet, 'TEST-100'))->toBeLessThan(strpos($sheet, 'DEPARTED-300'));
 });
 
 it('shows the sorting choices on the main and every status list', function (string $route) {
@@ -502,7 +547,7 @@ it('saves the departed status with its date', function () {
         ->and($this->tanker->fresh()->latestQueue->scheduled_time)->toBe('16:42');
 });
 
-it('keeps every repeated truck status occurrence in its live status list until reset', function () {
+it('keeps repeated status occurrences in history but shows one live row for the current truck state', function () {
     $this->travelTo(Carbon::parse('2026-09-15 08:00:00', 'Asia/Baghdad'));
     $this->actingAs($this->gatekeeper)
         ->postJson(route('gatekeeper.update-status', $this->tanker), [
@@ -532,14 +577,14 @@ it('keeps every repeated truck status occurrence in its live status list until r
     expect(QueueStatusEvent::query()->where('status', 'green')->count())->toBe(2)
         ->and(QueueStatusEvent::query()->where('status', 'departed')->count())->toBe(2);
 
-    $greenList = $this->get(route('gatekeeper.filter', 'green'))->assertOk();
-    expect(substr_count($greenList->getContent(), 'TEST-100'))->toBe(2)
-        ->and(substr_count($greenList->getContent(), 'status-event-'))->toBe(2)
-        ->and(substr_count($greenList->getContent(), '\u0022departed_count\u0022:2'))->toBe(2);
+    $this->get(route('gatekeeper.filter', 'green'))
+        ->assertOk()
+        ->assertDontSee('TEST-100');
 
     $departedList = $this->get(route('gatekeeper.filter', 'departed'))->assertOk();
-    expect(substr_count($departedList->getContent(), 'TEST-100'))->toBe(2)
-        ->and(substr_count($departedList->getContent(), '\u0022departed_count\u0022:2'))->toBe(2);
+    expect(substr_count($departedList->getContent(), 'TEST-100'))->toBe(1)
+        ->and(substr_count($departedList->getContent(), 'status-event-'))->toBe(1)
+        ->and(substr_count($departedList->getContent(), '\u0022departed_count\u0022:2'))->toBe(1);
 
     $this->get(route('gatekeeper.index'))
         ->assertOk()
@@ -555,7 +600,7 @@ it('keeps every repeated truck status occurrence in its live status list until r
         ->assertDontSee('TEST-100');
 });
 
-it('undoes only the latest current status occurrence when returning a truck to pending', function () {
+it('soft cancels the latest status occurrence and restores the previous truck state', function () {
     $this->actingAs($this->gatekeeper)
         ->postJson(route('gatekeeper.update-status', $this->tanker), ['status' => 'green'])
         ->assertOk();
@@ -572,8 +617,38 @@ it('undoes only the latest current status occurrence when returning a truck to p
         ->assertJsonPath('departed_count', 0);
 
     expect(QueueStatusEvent::query()->where('status', 'green')->count())->toBe(1)
-        ->and(QueueStatusEvent::query()->where('status', 'departed')->count())->toBe(0)
-        ->and($this->tanker->fresh()->latestQueue->status)->toBe('pending');
+        ->and(QueueStatusEvent::query()->where('status', 'departed')->count())->toBe(1)
+        ->and(QueueStatusEvent::query()->where('status', 'departed')->whereNotNull('cancelled_at')->count())->toBe(1)
+        ->and($this->tanker->fresh()->latestQueue->status)->toBe('green');
+});
+
+it('cancels the selected live event by id and restores the preceding state', function () {
+    $this->actingAs($this->gatekeeper)
+        ->postJson(route('gatekeeper.update-status', $this->tanker), [
+            'status' => 'green',
+            'scheduled_date' => '2026-09-15',
+            'scheduled_time' => '10:00',
+        ])->assertOk();
+
+    $this->postJson(route('gatekeeper.update-status', $this->tanker), ['status' => 'departed'])
+        ->assertOk();
+
+    $departure = QueueStatusEvent::query()->where('status', 'departed')->firstOrFail();
+
+    $this->deleteJson(route('gatekeeper.cancel-status-event', $departure))
+        ->assertOk()
+        ->assertJsonPath('status', 'green')
+        ->assertJsonPath('scheduled_date', '2026-09-15')
+        ->assertJsonMissingPath('scheduled_date.date')
+        ->assertJsonPath('departed_count', 0);
+
+    expect($departure->fresh()->cancelled_at)->not->toBeNull()
+        ->and($departure->fresh()->cancelled_by)->toBe($this->gatekeeper->id)
+        ->and($this->tanker->fresh()->latestQueue->status)->toBe('green')
+        ->and($this->tanker->fresh()->latestQueue->scheduled_date)->toBe('2026-09-15');
+
+    $this->get(route('gatekeeper.filter', 'departed'))->assertDontSee('TEST-100');
+    $this->get(route('gatekeeper.filter', 'green'))->assertSee('TEST-100');
 });
 
 it('clears an existing date and time when marking a tanker as not arrived', function () {

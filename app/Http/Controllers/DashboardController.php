@@ -26,18 +26,7 @@ class DashboardController extends Controller
 
         $totalTankers = Tanker::query()->count();
         $blockedTankers = Tanker::query()->whereNotNull('blocked_at')->count();
-        $activeEventCounts = QueueStatusEvent::query()
-            ->whereNull('queue_archive_id')
-            ->selectRaw('status, COUNT(*) as aggregate')
-            ->groupBy('status')
-            ->pluck('aggregate', 'status')
-            ->map(fn ($count) => (int) $count);
-        $tankersWithActiveEvents = QueueStatusEvent::query()
-            ->whereNull('queue_archive_id')
-            ->distinct()
-            ->pluck('tanker_id');
-        $legacyQueueCounts = Queue::query()
-            ->whereNotIn('tanker_id', $tankersWithActiveEvents)
+        $currentQueueCounts = Queue::query()
             ->selectRaw('status, COUNT(*) as aggregate')
             ->groupBy('status')
             ->pluck('aggregate', 'status')
@@ -49,10 +38,10 @@ class DashboardController extends Controller
 
         $statusCounts = [
             'pending' => max(0, $totalTankers - $assignedTankers),
-            'green' => $activeEventCounts->get('green', 0) + $legacyQueueCounts->get('green', 0),
-            'yellow' => $activeEventCounts->get('yellow', 0) + $legacyQueueCounts->get('yellow', 0),
-            'red' => $activeEventCounts->get('red', 0) + $legacyQueueCounts->get('red', 0),
-            'departed' => $activeEventCounts->get('departed', 0) + $legacyQueueCounts->get('departed', 0),
+            'green' => $currentQueueCounts->get('green', 0),
+            'yellow' => $currentQueueCounts->get('yellow', 0),
+            'red' => $currentQueueCounts->get('red', 0),
+            'departed' => $currentQueueCounts->get('departed', 0),
         ];
 
         $currentToday = Queue::query()
@@ -91,6 +80,7 @@ class DashboardController extends Controller
 
         $todayEventRecords = QueueStatusEvent::query()
             ->with('tanker:id,sequence_number,plate_number,sequence_owner')
+            ->whereNull('cancelled_at')
             ->whereDate('scheduled_date', $todayDate)
             ->whereIn('status', ['green', 'yellow', 'departed'])
             ->get()
@@ -150,6 +140,7 @@ class DashboardController extends Controller
                 ]));
 
         $departureEventRecords = QueueStatusEvent::query()
+            ->whereNull('cancelled_at')
             ->where('status', 'departed')
             ->whereBetween('scheduled_date', [$weekStart->toDateString(), $weekEnd->toDateString()])
             ->get()

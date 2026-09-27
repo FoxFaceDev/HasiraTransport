@@ -61,7 +61,7 @@ class QueueController extends Controller
             'status' => ['nullable', 'in:green,red,yellow,departed'],
             'date' => ['nullable', 'date_format:Y-m-d'],
             'schedule' => ['nullable', 'boolean'],
-            'sort' => ['nullable', 'in:queue,newest,oldest,scheduled'],
+            'sort' => ['nullable', 'in:queue,newest,oldest,scheduled,status'],
             'search' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -125,7 +125,45 @@ class QueueController extends Controller
             ])->contains(fn ($value) => Str::contains(Str::lower((string) $value), $needle));
         })->values();
 
-        if (($validated['sort'] ?? null) === 'scheduled') {
+        if (($validated['sort'] ?? null) === 'status') {
+            $statusRanks = ['green' => 0, 'yellow' => 1, 'departed' => 2];
+            $tankers = $tankers->sort(function (Tanker $first, Tanker $second) use ($statusRanks) {
+                $firstStatus = $first->latestQueue?->status ?? 'pending';
+                $secondStatus = $second->latestQueue?->status ?? 'pending';
+                $comparison = ($statusRanks[$firstStatus] ?? 3) <=> ($statusRanks[$secondStatus] ?? 3);
+
+                if ($comparison !== 0) {
+                    return $comparison;
+                }
+
+                $timeRank = static function (?string $time): int {
+                    if (str_starts_with((string) $time, '5:30')) {
+                        return 0;
+                    }
+
+                    if (str_starts_with((string) $time, '12:00')) {
+                        return 1;
+                    }
+
+                    return 2;
+                };
+                $comparison = $timeRank($first->latestQueue?->scheduled_time)
+                    <=> $timeRank($second->latestQueue?->scheduled_time);
+
+                if ($comparison !== 0) {
+                    return $comparison;
+                }
+
+                $comparison = strnatcasecmp(
+                    (string) $first->latestQueue?->scheduled_time,
+                    (string) $second->latestQueue?->scheduled_time
+                );
+
+                return $comparison !== 0
+                    ? $comparison
+                    : strnatcasecmp((string) $first->sequence_number, (string) $second->sequence_number);
+            })->values();
+        } elseif (($validated['sort'] ?? null) === 'scheduled') {
             $tankers = $tankers->sort(function (Tanker $first, Tanker $second) {
                 $firstDate = $first->latestQueue?->scheduled_date ?? '9999-12-31';
                 $secondDate = $second->latestQueue?->scheduled_date ?? '9999-12-31';
@@ -361,6 +399,26 @@ class QueueController extends Controller
             'scheduled_time' => $queue->scheduled_time,
             'status_updated_at' => $queue->status_updated_at?->toIso8601String(),
             'departed_count' => $tanker->activeDepartureEvents()->count(),
+        ]);
+    }
+
+    public function cancelStatusEvent(QueueStatusEvent $statusEvent)
+    {
+        $queue = DB::transaction(function () use ($statusEvent) {
+            $event = QueueStatusEvent::query()->lockForUpdate()->findOrFail($statusEvent->id);
+
+            abort_if($event->queue_archive_id !== null || $event->cancelled_at !== null, 404);
+
+            return $this->cancelEventAndRestoreCurrentState($event, auth()->id(), now());
+        }, 3);
+
+        return response()->json([
+            'success' => true,
+            'status' => $queue->status,
+            'scheduled_date' => $queue->scheduled_date,
+            'scheduled_time' => $queue->scheduled_time,
+            'status_updated_at' => $queue->status_updated_at?->toIso8601String(),
+            'departed_count' => $statusEvent->tanker->activeDepartureEvents()->count(),
         ]);
     }
 
@@ -632,13 +690,17 @@ class QueueController extends Controller
 
         if ($payload['status'] === 'pending') {
             if ($previousStatus !== 'pending') {
-                QueueStatusEvent::query()
+                $event = QueueStatusEvent::query()
                     ->whereNull('queue_archive_id')
+                    ->whereNull('cancelled_at')
                     ->where('tanker_id', $tanker->id)
                     ->where('status', $previousStatus)
                     ->latest('id')
-                    ->limit(1)
-                    ->delete();
+                    ->first();
+
+                if ($event) {
+                    return $this->cancelEventAndRestoreCurrentState($event, $gatekeeperId, $occurredAt);
+                }
             }
 
             return $queue;
@@ -656,6 +718,36 @@ class QueueController extends Controller
         return $queue;
     }
 
+    private function cancelEventAndRestoreCurrentState(
+        QueueStatusEvent $event,
+        int $gatekeeperId,
+        Carbon $cancelledAt
+    ): Queue {
+        $event->update([
+            'cancelled_at' => $cancelledAt,
+            'cancelled_by' => $gatekeeperId,
+        ]);
+
+        $previousEvent = QueueStatusEvent::query()
+            ->whereNull('queue_archive_id')
+            ->whereNull('cancelled_at')
+            ->where('tanker_id', $event->tanker_id)
+            ->orderByDesc('id')
+            ->first();
+
+        return Queue::updateOrCreate(
+            ['tanker_id' => $event->tanker_id],
+            [
+                'driver_id' => null,
+                'status' => $previousEvent?->status ?? 'pending',
+                'scheduled_date' => $previousEvent?->scheduled_date?->toDateString(),
+                'scheduled_time' => $previousEvent?->scheduled_time,
+                'status_updated_at' => $cancelledAt,
+                'gatekeeper_id' => $gatekeeperId,
+            ]
+        );
+    }
+
     private function applyNoteOperation(Tanker $tanker, array $payload, int $gatekeeperId): void
     {
         Queue::updateOrCreate(
@@ -668,58 +760,24 @@ class QueueController extends Controller
         );
     }
 
-    /**
-     * Return one display row for every status occurrence in the active reset cycle.
-     * A synthesized row keeps records created outside the gatekeeper endpoints visible.
-     */
+    /** Return one live row per truck according to its current queue status. */
     private function activeStatusTankers(string $status)
     {
-        $eventTankers = QueueStatusEvent::query()
-            ->with(['tanker' => fn ($query) => $query
-                ->with('latestQueue')
-                ->withCount(['activeDepartureEvents as departed_count'])])
-            ->whereNull('queue_archive_id')
-            ->where('status', $status)
-            ->orderBy('occurred_at')
-            ->orderBy('id')
-            ->get()
-            ->filter(fn (QueueStatusEvent $event) => $event->tanker !== null)
-            ->map(function (QueueStatusEvent $event) {
-                $tanker = clone $event->tanker;
-                $currentQueue = $event->tanker->latestQueue;
-                $displayQueue = new Queue([
-                    'status' => $event->status,
-                    'scheduled_date' => $event->scheduled_date?->format('Y-m-d'),
-                    'scheduled_time' => $event->scheduled_time,
-                    'note' => $currentQueue?->note,
-                    'status_updated_at' => $event->occurred_at,
-                ]);
-                $displayQueue->id = $currentQueue?->id;
-                $displayQueue->updated_at = $event->occurred_at;
-
-                $tanker->setRelation('latestQueue', $displayQueue);
-                $tanker->setAttribute('status_event_id', $event->id);
-                $tanker->setAttribute('current_status', $currentQueue?->status ?? 'pending');
-
-                return $tanker;
-            });
-
-        $legacyTankers = Tanker::query()
-            ->with('latestQueue')
+        return Tanker::query()
+            ->with(['latestQueue', 'latestActiveQueueStatusEvent'])
             ->withCount(['activeDepartureEvents as departed_count'])
             ->whereHas('latestQueue', fn ($query) => $query->where('status', $status))
-            ->whereDoesntHave('queueStatusEvents', fn ($query) => $query
-                ->whereNull('queue_archive_id')
-                ->where('status', $status))
             ->orderByRaw('CAST(sequence_number AS UNSIGNED)')
             ->orderBy('sequence_number')
             ->get()
             ->each(function (Tanker $tanker) {
-                $tanker->setAttribute('status_event_id', null);
+                $currentEvent = $tanker->latestActiveQueueStatusEvent;
+                $tanker->setAttribute(
+                    'status_event_id',
+                    $currentEvent?->status === $tanker->latestQueue?->status ? $currentEvent->id : null
+                );
                 $tanker->setAttribute('current_status', $tanker->latestQueue?->status ?? 'pending');
             });
-
-        return $eventTankers->concat($legacyTankers)->values();
     }
 
     private function serializeTanker(Tanker $tanker): array
@@ -731,6 +789,7 @@ class QueueController extends Controller
             'row_key' => $tanker->getAttribute('status_event_id')
                 ? 'status-event-'.$tanker->getAttribute('status_event_id')
                 : 'tanker-'.$tanker->id,
+            'status_event_id' => $tanker->getAttribute('status_event_id'),
             'current_status' => $tanker->getAttribute('current_status') ?? $queue?->status ?? 'pending',
             'departed_count' => (int) ($tanker->getAttribute('departed_count') ?? 0),
             'created_at' => $tanker->created_at?->toIso8601String(),

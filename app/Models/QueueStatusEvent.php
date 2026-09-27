@@ -17,6 +17,8 @@ class QueueStatusEvent extends Model
         'scheduled_date',
         'scheduled_time',
         'occurred_at',
+        'cancelled_at',
+        'cancelled_by',
     ];
 
     protected function casts(): array
@@ -24,6 +26,7 @@ class QueueStatusEvent extends Model
         return [
             'scheduled_date' => 'date:Y-m-d',
             'occurred_at' => 'datetime',
+            'cancelled_at' => 'datetime',
         ];
     }
 
@@ -40,5 +43,10 @@ class QueueStatusEvent extends Model
     public function archive()
     {
         return $this->belongsTo(QueueArchive::class, 'queue_archive_id');
+    }
+
+    public function canceller()
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
     }
 }

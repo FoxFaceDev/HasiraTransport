@@ -59,11 +59,14 @@
         </div>
 
         @can('update queue status')
-        <div x-cloak x-show="actionsTanker && !isBlocked(actionsTanker)" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div x-cloak x-show="actionsTanker && !actionsTanker.status_event_id && !isBlocked(actionsTanker)" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button type="button" @click="getCurrentStatus(actionsTanker) === 'green' ? revertStatus(actionsTanker.id) : openScheduleModal(actionsTanker.id, 'green'); closeActionsModal()" class="rounded-lg border px-4 py-3 text-sm font-bold transition" :class="getCurrentStatus(actionsTanker) === 'green' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'">هاتن</button>
             <button type="button" @click="getCurrentStatus(actionsTanker) === 'yellow' ? revertStatus(actionsTanker.id) : openScheduleModal(actionsTanker.id, 'yellow'); closeActionsModal()" class="rounded-lg border px-4 py-3 text-sm font-bold transition" :class="getCurrentStatus(actionsTanker) === 'yellow' ? 'bg-amber-500 border-amber-500 text-white' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'">دواخستن</button>
             <button type="button" @click="getCurrentStatus(actionsTanker) === 'red' ? revertStatus(actionsTanker.id) : updateStatus(actionsTanker.id, 'red'); closeActionsModal()" class="rounded-lg border px-4 py-3 text-sm font-bold transition" :class="getCurrentStatus(actionsTanker) === 'red' ? 'bg-rose-600 border-rose-600 text-white' : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'">نەهاتن</button>
             <button type="button" @click="getCurrentStatus(actionsTanker) === 'departed' ? revertStatus(actionsTanker.id) : updateStatus(actionsTanker.id, 'departed'); closeActionsModal()" class="rounded-lg border px-4 py-3 text-sm font-bold transition" :class="getCurrentStatus(actionsTanker) === 'departed' ? 'bg-sky-600 border-sky-600 text-white' : 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100'">ڕۆیشتن</button>
+        </div>
+        <div x-cloak x-show="actionsTanker?.status_event_id && !isBlocked(actionsTanker)">
+            <button type="button" @click="cancelStatusEvent(actionsTanker); closeActionsModal()" class="w-full rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700 transition hover:bg-rose-100">هەڵوەشاندنەوەی ئەم تۆمارە</button>
         </div>
         @endcan
 

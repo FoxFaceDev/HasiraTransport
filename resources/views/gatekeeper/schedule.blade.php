@@ -15,7 +15,7 @@
         </div>
         <div class="flex flex-col gap-3 border-t border-slate-200 pt-3 md:flex-row md:items-end">
             <input type="search" x-model="search" @input.debounce.100ms="search = $event.target.value" placeholder="گەڕان بەدوای بارهەڵگر، خاوەنی خەت، مۆبایل، VIN..." dir="rtl" autocomplete="off" class="glass-input w-full rounded-lg px-4 py-2 text-right text-sm xl:w-72">
-            @include('gatekeeper.partials.sort-control')
+            @include('gatekeeper.partials.sort-control', ['showStatusSort' => true])
             @include('gatekeeper.partials.export-control')
         </div>
     </div>

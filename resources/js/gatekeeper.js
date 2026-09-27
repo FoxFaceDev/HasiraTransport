@@ -70,6 +70,31 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
             });
 
             const sorted = visible.sort((first, second) => {
+                if (this.sortMode === 'status') {
+                    const statusRank = tanker => ({ green: 0, yellow: 1, departed: 2 })[this.getStatus(tanker)] ?? 3;
+                    const statusComparison = statusRank(first) - statusRank(second);
+                    if (statusComparison !== 0) return statusComparison;
+
+                    const timeRank = tanker => {
+                        const time = String(tanker.queue?.scheduled_time || '');
+                        if (time.startsWith('5:30')) return 0;
+                        if (time.startsWith('12:00')) return 1;
+                        return 2;
+                    };
+                    const timeRankComparison = timeRank(first) - timeRank(second);
+                    if (timeRankComparison !== 0) return timeRankComparison;
+
+                    const timeComparison = String(first.queue?.scheduled_time || '')
+                        .localeCompare(String(second.queue?.scheduled_time || ''), undefined, { numeric: true });
+                    if (timeComparison !== 0) return timeComparison;
+
+                    return String(first.sequence_number || '').localeCompare(
+                        String(second.sequence_number || ''),
+                        undefined,
+                        { numeric: true, sensitivity: 'base' },
+                    );
+                }
+
                 if (this.sortMode === 'scheduled') {
                     const firstDate = first.queue?.scheduled_date || '9999-12-31';
                     const secondDate = second.queue?.scheduled_date || '9999-12-31';
@@ -296,6 +321,20 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
                 scheduled_date: null,
                 scheduled_time: null,
             });
+        },
+
+        async cancelStatusEvent(tanker) {
+            if (!tanker?.status_event_id) return null;
+            if (!confirm('دڵنیای لە هەڵوەشاندنەوەی ئەم تۆمارە؟')) return null;
+
+            const result = await this.send(
+                `/gatekeeper/status-events/${encodeURIComponent(tanker.status_event_id)}`,
+                {},
+                'DELETE',
+            );
+
+            if (result) window.location.reload();
+            return result;
         },
 
         async updateNote(tankerId, note) {

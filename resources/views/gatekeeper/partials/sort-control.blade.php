@@ -4,6 +4,9 @@
         @if(($status ?? null) === 'yellow')
         <option value="scheduled">بەپێی ڕۆژ و کات</option>
         @endif
+        @if($showStatusSort ?? false)
+        <option value="status">هاتن، پاشان دواخراوە</option>
+        @endif
         <option value="queue">بەپێی کۆدی حەسیرە</option>
         <option value="newest">لە نوێوە بۆ کۆن</option>
         <option value="oldest">لە کۆنەوە بۆ نوێ</option>

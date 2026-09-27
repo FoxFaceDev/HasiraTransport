@@ -39,7 +39,18 @@ class Tanker extends Model
     {
         return $this->hasMany(QueueStatusEvent::class)
             ->whereNull('queue_archive_id')
+            ->whereNull('cancelled_at')
             ->where('status', 'departed');
+    }
+
+    public function latestActiveQueueStatusEvent()
+    {
+        return $this->hasOne(QueueStatusEvent::class)->ofMany(
+            ['id' => 'MAX'],
+            fn ($query) => $query
+                ->whereNull('queue_archive_id')
+                ->whereNull('cancelled_at')
+        );
     }
 
     public function ownershipTransfers()

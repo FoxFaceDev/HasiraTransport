@@ -45,6 +45,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/gatekeeper/export', [QueueController::class, 'export'])->middleware('can:view gatekeeper')->name('gatekeeper.export');
     Route::get('/gatekeeper/filter/{status}', [QueueController::class, 'filter'])->middleware('can:view gatekeeper')->name('gatekeeper.filter');
     Route::post('/gatekeeper/queue/{tanker}', [QueueController::class, 'updateStatus'])->middleware('can:update queue status')->name('gatekeeper.update-status');
+    Route::delete('/gatekeeper/status-events/{statusEvent}', [QueueController::class, 'cancelStatusEvent'])->middleware('can:update queue status')->name('gatekeeper.cancel-status-event');
     Route::post('/gatekeeper/queue/{tanker}/note', [QueueController::class, 'updateNote'])->middleware('can:update queue notes')->name('gatekeeper.update-note');
     Route::patch('/gatekeeper/tankers/{tanker}/phone', [QueueController::class, 'updatePhone'])->middleware('can:update gatekeeper phone')->name('gatekeeper.update-phone');
     Route::patch('/gatekeeper/tankers/{tanker}/block', [QueueController::class, 'blockTanker'])->middleware('can:block tankers from gatekeeper')->name('gatekeeper.block-tanker');
