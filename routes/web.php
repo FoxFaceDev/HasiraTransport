@@ -21,6 +21,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/drivers', [DriverController::class, 'index'])->middleware('can:view drivers')->name('drivers.index');
+    Route::get('/drivers/export', [DriverController::class, 'export'])->middleware('can:view drivers')->name('drivers.export');
     Route::post('/drivers', [DriverController::class, 'store'])->middleware('can:create drivers')->name('drivers.store');
     Route::put('/drivers/{driver}', [DriverController::class, 'update'])->middleware('can:edit drivers')->name('drivers.update');
     Route::delete('/drivers/{driver}', [DriverController::class, 'destroy'])->middleware('can:delete drivers')->name('drivers.destroy');
@@ -28,6 +29,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/drivers/{driver}/block', [DriverController::class, 'unblock'])->middleware('can:edit drivers')->name('drivers.unblock');
 
     Route::get('/tankers', [TankerController::class, 'index'])->middleware('can:view tankers')->name('tankers.index');
+    Route::get('/tankers/export', [TankerController::class, 'export'])->middleware('can:view tankers')->name('tankers.export');
     Route::post('/tankers', [TankerController::class, 'store'])->middleware('can:create tankers')->name('tankers.store');
     Route::put('/tankers/{tanker}', [TankerController::class, 'update'])->middleware('can:edit tankers')->name('tankers.update');
     Route::post('/tankers/{tanker}/sell', [TankerController::class, 'sell'])->middleware('can:edit tankers')->name('tankers.sell');

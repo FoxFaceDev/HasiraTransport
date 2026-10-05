@@ -5,6 +5,31 @@ import { gatekeeperQueueManager } from './gatekeeper';
 
 window.Alpine = Alpine;
 window.gatekeeperQueueManager = gatekeeperQueueManager;
+window.printDataTable = function (sourceTable, title, rowAttribute, options = {}) {
+    const table = sourceTable.cloneNode(true);
+    const width = options.width || 1100;
+    const fontSize = options.fontSize || 13;
+    const pageMargin = options.pageMargin || 12;
+
+    table.querySelectorAll('tr').forEach(row => row.lastElementChild?.remove());
+    table.querySelectorAll('tbody tr').forEach(row => {
+        if (!row.hasAttribute(rowAttribute) || row.style.display === 'none') {
+            row.remove();
+        }
+    });
+
+    const printWindow = window.open('', '_blank', `width=${width},height=750`);
+    if (!printWindow) {
+        window.alert('تکایە ڕێگە بە کردنەوەی پەنجەرەی چاپ بدە.');
+
+        return;
+    }
+
+    printWindow.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>${title}</title><style>@page{size:landscape;margin:${pageMargin}mm}body{font-family:Arial,sans-serif;direction:rtl;color:#111}h1{text-align:center;font-size:22px;margin:0 0 18px}table{width:100%;border-collapse:collapse;font-size:${fontSize}px}th,td{border:1px solid #777;padding:7px;text-align:right}th{background:#e5e7eb;font-weight:700}.blocked-badge{display:inline-block;margin-right:6px;font-size:10px}</style></head><body><h1>${title}</h1>${table.outerHTML}</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    window.setTimeout(() => printWindow.print(), 250);
+};
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

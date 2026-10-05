@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Driver;
+use App\Support\XlsxWriter;
 use Illuminate\Http\Request;
 
 class DriverController extends Controller
@@ -24,6 +25,51 @@ class DriverController extends Controller
         $drivers = $query->get();
 
         return view('drivers.index', compact('drivers'));
+    }
+
+    public function export(Request $request)
+    {
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+        ]);
+        $query = Driver::query()->orderBy('id');
+
+        if ($search = trim($validated['search'] ?? '')) {
+            $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('license_number', 'like', "%{$search}%")
+                    ->orWhere('certificate_number', 'like', "%{$search}%");
+            });
+        }
+
+        $rows = [[
+            '#',
+            'ناوی شۆفێر',
+            'مۆبایل',
+            'مۆڵەتی شۆفێری',
+            'شەهادە',
+        ]];
+
+        foreach ($query->get() as $index => $driver) {
+            $certificate = $driver->has_certificate
+                ? 'هەیەتی'.($driver->certificate_number ? ' ('.$driver->certificate_number.')' : '')
+                : 'نییەتی';
+
+            $rows[] = [
+                $index + 1,
+                $driver->name.($driver->blocked_at ? ' (شۆفێر بلۆککراوە)' : ''),
+                $driver->phone,
+                $driver->license_number,
+                $certificate,
+            ];
+        }
+
+        $path = XlsxWriter::create('شۆفێرەکان', $rows, [8, 30, 20, 24, 24]);
+
+        return response()->download($path, 'drivers-'.now('Asia/Baghdad')->format('Y-m-d').'.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
     }
 
     public function store(Request $request)

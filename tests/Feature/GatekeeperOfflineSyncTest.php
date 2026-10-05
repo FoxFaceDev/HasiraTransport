@@ -260,7 +260,7 @@ it('includes trucks departed on the selected day and offers status sorting', fun
 
     expect(file_get_contents(resource_path('js/gatekeeper.js')))
         ->toContain("['green', 'yellow', 'departed']")
-        ->toContain("{ green: 0, yellow: 1, departed: 2 }")
+        ->toContain('{ green: 0, yellow: 1, departed: 2 }')
         ->toContain("['newest', 'oldest'].includes(this.sortMode)");
 });
 
@@ -545,6 +545,67 @@ it('saves the departed status with its date', function () {
     expect($this->tanker->fresh()->latestQueue->status)->toBe('departed')
         ->and($this->tanker->fresh()->latestQueue->scheduled_date)->toBe('2026-09-15')
         ->and($this->tanker->fresh()->latestQueue->scheduled_time)->toBe('16:42');
+});
+
+it('keeps the scheduled shift beside the actual departure time and filters departed trucks by shift', function () {
+    $secondTanker = Tanker::create([
+        'sequence_number' => '13',
+        'sequence_owner' => 'Second Owner',
+        'sequence_owner_phone' => '07504445566',
+        'plate_number' => 'TEST-1200',
+        'vin' => 'VIN-SHIFT-2',
+        'truck_type' => 'Tanker',
+        'truck_model' => '2021',
+        'truck_color' => 'Blue',
+    ]);
+
+    $this->actingAs($this->gatekeeper)->postJson(route('gatekeeper.update-status', $this->tanker), [
+        'status' => 'green',
+        'scheduled_date' => '2026-10-05',
+        'scheduled_time' => '5:30 بەیانی',
+    ])->assertOk();
+    $this->postJson(route('gatekeeper.update-status', $secondTanker), [
+        'status' => 'yellow',
+        'scheduled_date' => '2026-10-05',
+        'scheduled_time' => '12:00 نیوەڕۆ',
+    ])->assertOk();
+
+    $this->travelTo(Carbon::parse('2026-10-05 14:15:00', 'Asia/Baghdad'));
+    $this->postJson(route('gatekeeper.update-status', $this->tanker), ['status' => 'departed'])
+        ->assertOk()
+        ->assertJsonPath('scheduled_time', '14:15')
+        ->assertJsonPath('shift_time', '5:30 بەیانی');
+    $this->postJson(route('gatekeeper.update-status', $secondTanker), ['status' => 'departed'])
+        ->assertOk()
+        ->assertJsonPath('shift_time', '12:00 نیوەڕۆ');
+
+    expect($this->tanker->fresh()->latestQueue->shift_time)->toBe('5:30 بەیانی')
+        ->and($this->tanker->fresh()->latestQueue->scheduled_time)->toBe('14:15')
+        ->and(QueueStatusEvent::query()->where('tanker_id', $this->tanker->id)->latest('id')->value('shift_time'))->toBe('5:30 بەیانی');
+
+    $this->get(route('gatekeeper.filter', 'departed'))
+        ->assertOk()
+        ->assertSee('فلتەر بە پێی کاتی دیاریکراو')
+        ->assertSee('ئاسایی — بێ فلتەر')
+        ->assertSee('تەنها 5:30 بەیانی')
+        ->assertSee('تەنها 12:00 نیوەڕۆ')
+        ->assertSee('کاتی ڕۆیشتن')
+        ->assertSee('tanker.queue?.shift_time', false);
+
+    $response = $this->get(route('gatekeeper.export', [
+        'status' => 'departed',
+        'shift' => '5:30',
+    ]))->assertOk();
+    $zip = new ZipArchive;
+    expect($zip->open($response->baseResponse->getFile()->getPathname()))->toBeTrue();
+    $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+    $zip->close();
+
+    expect($sheet)->toContain('کاتی دیاریکراو')
+        ->toContain('کاتی ڕۆیشتن')
+        ->toContain('TEST-100')
+        ->toContain('5:30 بەیانی')
+        ->not->toContain('TEST-1200');
 });
 
 it('keeps repeated status occurrences in history but shows one live row for the current truck state', function () {

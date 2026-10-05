@@ -3,6 +3,7 @@ function normalizedQueue(queue = {}) {
         status: queue.status || 'pending',
         scheduled_date: queue.scheduled_date || null,
         scheduled_time: queue.scheduled_time || null,
+        shift_time: queue.shift_time || null,
         note: queue.note || '',
         status_updated_at: queue.status_updated_at || queue.updated_at || null,
         updated_at: queue.updated_at || null,
@@ -23,6 +24,7 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
         sortMode: options.sortMode || 'queue',
         exportBaseUrl: options.exportBaseUrl || '/gatekeeper/export',
         statusFilter: options.statusFilter || null,
+        departureShift: options.departureShift || 'normal',
         filterDate: options.filterDate || '',
         scheduleOnly: options.scheduleOnly || false,
         selectedDate: options.dateFilter || localDateString(),
@@ -46,6 +48,14 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
 
             const visible = this.tankers.filter(tanker => {
                 if (this.statusFilter && this.getStatus(tanker) !== this.statusFilter) return false;
+                if (this.statusFilter === 'departed') {
+                    const shiftTime = String(tanker.queue?.shift_time || '');
+                    if (['5:30', '12:00'].includes(this.departureShift)
+                        && !shiftTime.startsWith(this.departureShift)) return false;
+                    if (this.departureShift === 'both'
+                        && !shiftTime.startsWith('5:30')
+                        && !shiftTime.startsWith('12:00')) return false;
+                }
                 if (this.filterDate && ['green', 'yellow', 'departed'].includes(this.statusFilter)) {
                     if (tanker.queue?.scheduled_date !== this.filterDate) return false;
                 }
@@ -70,6 +80,17 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
             });
 
             const sorted = visible.sort((first, second) => {
+                if (this.statusFilter === 'departed' && this.departureShift === 'both') {
+                    const shiftRank = tanker => {
+                        const time = String(tanker.queue?.shift_time || '');
+                        if (time.startsWith('5:30')) return 0;
+                        if (time.startsWith('12:00')) return 1;
+                        return 2;
+                    };
+                    const shiftComparison = shiftRank(first) - shiftRank(second);
+                    if (shiftComparison !== 0) return shiftComparison;
+                }
+
                 if (this.sortMode === 'status') {
                     const statusRank = tanker => ({ green: 0, yellow: 1, departed: 2 })[this.getStatus(tanker)] ?? 3;
                     const statusComparison = statusRank(first) - statusRank(second);
@@ -160,6 +181,7 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
             url.searchParams.set('sort', this.sortMode);
             if (this.search.trim()) url.searchParams.set('search', this.search.trim());
             if (this.statusFilter) url.searchParams.set('status', this.statusFilter);
+            if (this.statusFilter === 'departed') url.searchParams.set('shift', this.departureShift);
 
             if (this.scheduleOnly) {
                 url.searchParams.set('schedule', '1');
@@ -309,6 +331,7 @@ export function gatekeeperQueueManager(initialSnapshot = {}, options = {}) {
                     ...payload,
                     scheduled_date: result.scheduled_date,
                     scheduled_time: result.scheduled_time,
+                    shift_time: result.shift_time,
                     status_updated_at: result.status_updated_at,
                     departed_count: result.departed_count,
                 });

@@ -8,6 +8,14 @@
         editDriver: null,
         search: @js(request('search', '')),
         hasSearchResults: true,
+        get exportUrl() {
+            const url = new URL(@js(route('drivers.export')), window.location.origin);
+            if (this.search.trim()) url.searchParams.set('search', this.search.trim());
+            return url.toString();
+        },
+        printTable() {
+            window.printDataTable(this.$refs.driverTable, 'شۆفێرەکان', 'data-driver-search');
+        },
         filterDrivers() {
             const query = this.search.trim().toLocaleLowerCase();
             let visibleRows = 0;
@@ -34,6 +42,8 @@
                 <input type="search" name="search" x-model="search" @input.debounce.100ms="filterDrivers()" value="{{ request('search') }}" placeholder="گەڕان بەدوای شۆفێر..." dir="rtl" autocomplete="off" class="glass-input px-4 py-2 rounded-lg text-sm w-64 text-right">
                 <button type="submit" class="btn-secondary px-4 py-2 rounded-lg text-sm font-semibold">گەڕان</button>
             </form>
+            <button type="button" @click="printTable()" class="btn-secondary px-4 py-2 rounded-lg text-sm font-semibold">چاپکردنی خشتە</button>
+            <a :href="exportUrl" class="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">داگرتنی Excel</a>
             @can('create drivers')
             <button type="button" @click="showAddModal = true" class="btn-primary px-4 py-2 rounded-lg flex items-center space-x-2 space-x-reverse">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -45,7 +55,7 @@
 
     <!-- Drivers Table -->
     <div class="glass-panel overflow-x-auto">
-        <table class="w-full text-right border-collapse">
+        <table x-ref="driverTable" class="w-full text-right border-collapse">
             <thead>
                 <tr class="border-b border-white/10 text-gray-400">
                     <th class="py-4 px-6 font-normal">#</th>

@@ -17,6 +17,7 @@ class Queue extends Model
         'gatekeeper_id',
         'scheduled_date',
         'scheduled_time',
+        'shift_time',
         'note',
     ];
 

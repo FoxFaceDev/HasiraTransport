@@ -16,6 +16,7 @@ class QueueStatusEvent extends Model
         'status',
         'scheduled_date',
         'scheduled_time',
+        'shift_time',
         'occurred_at',
         'cancelled_at',
         'cancelled_by',

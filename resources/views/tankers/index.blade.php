@@ -15,6 +15,14 @@
         saleData: {},
         tankerSearch: @js(request('search', '')),
         hasSearchResults: true,
+        get exportUrl() {
+            const url = new URL(@js(route('tankers.export')), window.location.origin);
+            if (this.tankerSearch.trim()) url.searchParams.set('search', this.tankerSearch.trim());
+            return url.toString();
+        },
+        printTable() {
+            window.printDataTable(this.$refs.tankerTable, 'خەتەکان', 'data-tanker-search', { width: 1300, fontSize: 11, pageMargin: 8 });
+        },
         openOperation(tanker, type = 'sale_with_truck') {
             this.saleTanker = tanker;
             this.saleData = {
@@ -72,6 +80,8 @@
                 <input type="search" name="search" x-model="tankerSearch" @input.debounce.100ms="filterTankers()" value="{{ request('search') }}" placeholder="گەڕان بەدوای خەت..." dir="rtl" autocomplete="off" class="glass-input px-4 py-2 rounded-lg text-sm w-64 text-right">
                 <button type="submit" class="btn-secondary px-4 py-2 rounded-lg text-sm font-semibold">گەڕان</button>
             </form>
+            <button type="button" @click="printTable()" class="btn-secondary px-4 py-2 rounded-lg text-sm font-semibold">چاپکردنی خشتە</button>
+            <a :href="exportUrl" class="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">داگرتنی Excel</a>
             
             @can('create tankers')
             @if($tankerCount < $maxTankers)
@@ -149,7 +159,7 @@
 
     <!-- Tankers Table -->
     <div class="glass-panel overflow-x-auto">
-        <table class="w-full text-right border-collapse">
+        <table x-ref="tankerTable" class="w-full text-right border-collapse">
             <thead>
                 <tr class="border-b border-white/10 text-gray-400">
                     <th class="py-4 px-6 font-normal">ڕیزبەندی</th>

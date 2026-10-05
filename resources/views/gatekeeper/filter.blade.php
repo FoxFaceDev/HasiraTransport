@@ -25,10 +25,21 @@
                 <input type="date" x-model="filterDate" @change="changeFilterDate($event.target.value)" class="glass-input w-full rounded-lg px-4 py-2">
             </label>
             @endif
+            @if($status === 'departed')
+            <label class="block md:w-56">
+                <span class="form-label mb-1 block">فلتەر بە پێی کاتی دیاریکراو</span>
+                <select x-model="departureShift" class="glass-input w-full rounded-lg px-4 py-2">
+                    <option value="normal">ئاسایی — بێ فلتەر</option>
+                    <option value="5:30">تەنها 5:30 بەیانی</option>
+                    <option value="12:00">تەنها 12:00 نیوەڕۆ</option>
+                    <option value="both">هەردووکیان — 5:30 پاشان 12:00</option>
+                </select>
+            </label>
+            @endif
             @include('gatekeeper.partials.sort-control')
             @include('gatekeeper.partials.export-control')
         </div>
     </div>
-    @include('gatekeeper.partials.queue-table', ['showRowNumber' => in_array($status, ['green', 'yellow', 'departed'], true)])
+    @include('gatekeeper.partials.queue-table', ['showRowNumber' => in_array($status, ['green', 'yellow', 'departed'], true), 'showDepartureShift' => $status === 'departed'])
 </div>
 @endsection

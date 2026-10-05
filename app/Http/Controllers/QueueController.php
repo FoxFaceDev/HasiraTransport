@@ -63,6 +63,7 @@ class QueueController extends Controller
             'schedule' => ['nullable', 'boolean'],
             'sort' => ['nullable', 'in:queue,newest,oldest,scheduled,status'],
             'search' => ['nullable', 'string', 'max:255'],
+            'shift' => ['nullable', 'in:normal,both,5:30,12:00'],
         ]);
 
         $statusLabels = [
@@ -84,12 +85,27 @@ class QueueController extends Controller
         $date = $validated['date'] ?? null;
         $scheduleOnly = (bool) ($validated['schedule'] ?? false);
         $search = trim($validated['search'] ?? '');
+        $shift = $validated['shift'] ?? 'normal';
 
-        $tankers = $tankers->filter(function (Tanker $tanker) use ($status, $date, $scheduleOnly, $search) {
+        $tankers = $tankers->filter(function (Tanker $tanker) use ($status, $date, $scheduleOnly, $search, $shift) {
             $queueStatus = $tanker->latestQueue?->status ?? 'pending';
 
             if ($status && $queueStatus !== $status) {
                 return false;
+            }
+
+            if ($status === 'departed') {
+                $shiftTime = (string) $tanker->latestQueue?->shift_time;
+
+                if (in_array($shift, ['5:30', '12:00'], true) && ! str_starts_with($shiftTime, $shift)) {
+                    return false;
+                }
+
+                if ($shift === 'both'
+                    && ! str_starts_with($shiftTime, '5:30')
+                    && ! str_starts_with($shiftTime, '12:00')) {
+                    return false;
+                }
             }
 
             if ($scheduleOnly) {
@@ -217,6 +233,25 @@ class QueueController extends Controller
             })->values();
         }
 
+        if ($status === 'departed' && $shift === 'both') {
+            $tankers = $tankers->sort(function (Tanker $first, Tanker $second) {
+                $shiftRank = static function (?string $time): int {
+                    if (str_starts_with((string) $time, '5:30')) {
+                        return 0;
+                    }
+
+                    if (str_starts_with((string) $time, '12:00')) {
+                        return 1;
+                    }
+
+                    return 2;
+                };
+
+                return $shiftRank($first->latestQueue?->shift_time)
+                    <=> $shiftRank($second->latestQueue?->shift_time);
+            })->values();
+        }
+
         $headers = [
             'کۆدی حەسیرە',
             'ژمارەی تەنکەر',
@@ -237,11 +272,17 @@ class QueueController extends Controller
 
         array_unshift($headers, 'ژمارە');
 
+        $includeShiftTime = $status === 'departed';
+        if ($includeShiftTime) {
+            $headers[12] = 'کاتی ڕۆیشتن';
+            array_splice($headers, 12, 0, ['کاتی دیاریکراو']);
+        }
+
         $rows = [$headers];
 
         foreach ($tankers as $index => $tanker) {
             $queue = $tanker->latestQueue;
-            $status = $queue?->status ?? 'pending';
+            $queueStatus = $queue?->status ?? 'pending';
             $row = [
                 $tanker->sequence_number,
                 $tanker->plate_number,
@@ -251,7 +292,7 @@ class QueueController extends Controller
                 $tanker->truck_type,
                 $tanker->truck_model,
                 $tanker->truck_color,
-                $statusLabels[$status] ?? $status,
+                $statusLabels[$queueStatus] ?? $queueStatus,
                 (int) ($tanker->departed_count ?? 0),
                 $queue?->scheduled_date
                     ? Carbon::parse($queue->scheduled_date)->format('Y-m-d')
@@ -264,11 +305,18 @@ class QueueController extends Controller
 
             array_unshift($row, $index + 1);
 
+            if ($includeShiftTime) {
+                array_splice($row, 12, 0, [$queue?->shift_time]);
+            }
+
             $rows[] = $row;
         }
 
         $widths = [11, 18, 24, 17, 24, 18, 16, 16, 14, 14, 18, 17, 30, 13, 23];
         array_unshift($widths, 8);
+        if ($includeShiftTime) {
+            array_splice($widths, 12, 0, [20]);
+        }
 
         $path = XlsxWriter::create('کۆنترۆڵی دەروازە', $rows, $widths);
         $fileName = 'gatekeeper_'.now('Asia/Baghdad')->format('Y_m_d_H_i_s').'.xlsx';
@@ -397,6 +445,7 @@ class QueueController extends Controller
             'status' => $queue->status,
             'scheduled_date' => $queue->scheduled_date,
             'scheduled_time' => $queue->scheduled_time,
+            'shift_time' => $queue->shift_time,
             'status_updated_at' => $queue->status_updated_at?->toIso8601String(),
             'departed_count' => $tanker->activeDepartureEvents()->count(),
         ]);
@@ -417,6 +466,7 @@ class QueueController extends Controller
             'status' => $queue->status,
             'scheduled_date' => $queue->scheduled_date,
             'scheduled_time' => $queue->scheduled_time,
+            'shift_time' => $queue->shift_time,
             'status_updated_at' => $queue->status_updated_at?->toIso8601String(),
             'departed_count' => $statusEvent->tanker->activeDepartureEvents()->count(),
         ]);
@@ -590,6 +640,7 @@ class QueueController extends Controller
                         'status' => $queue?->status ?? 'pending',
                         'scheduled_date' => $queue?->scheduled_date,
                         'scheduled_time' => $queue?->scheduled_time,
+                        'shift_time' => $queue?->shift_time,
                         'note' => $queue?->note,
                         'status_updated_at' => $queue?->status_updated_at ?? $queue?->updated_at,
                     ];
@@ -673,9 +724,11 @@ class QueueController extends Controller
             $departedAt = $occurredAt->copy()->timezone('Asia/Baghdad');
             $data['scheduled_date'] = $departedAt->toDateString();
             $data['scheduled_time'] = $departedAt->format('H:i');
+            $data['shift_time'] = $queue?->shift_time ?? $this->shiftTime($queue?->scheduled_time);
         } elseif ($payload['status'] === 'red') {
             $data['scheduled_date'] = null;
             $data['scheduled_time'] = null;
+            $data['shift_time'] = null;
         } else {
             if (array_key_exists('scheduled_date', $payload)) {
                 $data['scheduled_date'] = $payload['scheduled_date'];
@@ -683,6 +736,7 @@ class QueueController extends Controller
 
             if (array_key_exists('scheduled_time', $payload)) {
                 $data['scheduled_time'] = $payload['scheduled_time'];
+                $data['shift_time'] = $this->shiftTime($payload['scheduled_time']);
             }
         }
 
@@ -712,6 +766,7 @@ class QueueController extends Controller
             'status' => $queue->status,
             'scheduled_date' => $queue->scheduled_date,
             'scheduled_time' => $queue->scheduled_time,
+            'shift_time' => $queue->shift_time,
             'occurred_at' => $occurredAt,
         ]);
 
@@ -742,6 +797,7 @@ class QueueController extends Controller
                 'status' => $previousEvent?->status ?? 'pending',
                 'scheduled_date' => $previousEvent?->scheduled_date?->toDateString(),
                 'scheduled_time' => $previousEvent?->scheduled_time,
+                'shift_time' => $previousEvent?->shift_time ?? $this->shiftTime($previousEvent?->scheduled_time),
                 'status_updated_at' => $cancelledAt,
                 'gatekeeper_id' => $gatekeeperId,
             ]
@@ -806,6 +862,7 @@ class QueueController extends Controller
                 'status' => $queue->status,
                 'scheduled_date' => $queue->scheduled_date,
                 'scheduled_time' => $queue->scheduled_time,
+                'shift_time' => $queue->shift_time,
                 'note' => $queue->note,
                 'status_updated_at' => ($queue->status_updated_at ?? $queue->updated_at)?->toIso8601String(),
                 'updated_at' => $queue->updated_at?->toIso8601String(),
@@ -813,11 +870,21 @@ class QueueController extends Controller
                 'status' => 'pending',
                 'scheduled_date' => null,
                 'scheduled_time' => null,
+                'shift_time' => null,
                 'note' => null,
                 'status_updated_at' => null,
                 'updated_at' => null,
             ],
         ];
+    }
+
+    private function shiftTime(?string $time): ?string
+    {
+        $time = (string) $time;
+
+        return str_starts_with($time, '5:30') || str_starts_with($time, '12:00')
+            ? $time
+            : null;
     }
 
     private function snapshot(?string $status = null): array

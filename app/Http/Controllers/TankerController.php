@@ -6,6 +6,7 @@ use App\Models\Setting;
 use App\Models\Tanker;
 use App\Models\TankerTransfer;
 use App\Support\TankerTransferDocument;
+use App\Support\XlsxWriter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -38,6 +39,57 @@ class TankerController extends Controller
         $maxTankers = Setting::where('key', 'max_tankers')->value('value') ?? 1039;
 
         return view('tankers.index', compact('tankers', 'tankerCount', 'maxTankers'));
+    }
+
+    public function export(Request $request)
+    {
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+        ]);
+        $query = Tanker::query()->orderBy('id');
+
+        if ($search = trim($validated['search'] ?? '')) {
+            $query->where(function ($query) use ($search) {
+                $query->where('plate_number', 'like', "%{$search}%")
+                    ->orWhere('sequence_number', 'like', "%{$search}%")
+                    ->orWhere('sequence_owner', 'like', "%{$search}%")
+                    ->orWhere('sequence_owner_phone', 'like', "%{$search}%")
+                    ->orWhere('vin', 'like', "%{$search}%")
+                    ->orWhere('truck_type', 'like', "%{$search}%")
+                    ->orWhere('truck_model', 'like', "%{$search}%")
+                    ->orWhere('truck_color', 'like', "%{$search}%");
+            });
+        }
+
+        $rows = [[
+            'ڕیزبەندی',
+            'خاوەنی ڕیزبەندی',
+            'ژمارەی مۆبایلی خاوەن',
+            'ژمارەی تابلۆ',
+            'VIN',
+            'جۆری بارهەڵگر',
+            'مۆدێلی بارهەڵگر',
+            'ڕەنگی بارهەڵگر',
+        ]];
+
+        foreach ($query->get() as $tanker) {
+            $rows[] = [
+                $tanker->sequence_number,
+                $tanker->sequence_owner ?: '-',
+                $tanker->sequence_owner_phone ?: '-',
+                $tanker->plate_number.($tanker->blocked_at ? ' (خەت بلۆککراوە)' : ''),
+                $tanker->vin ?: '-',
+                $tanker->truck_type,
+                $tanker->truck_model ?: '-',
+                $tanker->truck_color ?: '-',
+            ];
+        }
+
+        $path = XlsxWriter::create('خەتەکان', $rows, [14, 28, 22, 22, 24, 20, 20, 20]);
+
+        return response()->download($path, 'tankers-'.now('Asia/Baghdad')->format('Y-m-d').'.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
     }
 
     public function store(Request $request)

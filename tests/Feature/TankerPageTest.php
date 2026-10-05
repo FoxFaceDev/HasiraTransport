@@ -38,6 +38,8 @@ it('shows the tanker page and all transfer operation controls', function () {
         ->assertDontSee('خاوەنی زنجیرە')
         ->assertDontSee('<th class="py-4 px-6 font-normal">#</th>', false)
         ->assertSee('@input.debounce.100ms="filterTankers()"', false)
+        ->assertSee('window.printDataTable(this.$refs.tankerTable', false)
+        ->assertDontSee('<!doctype html>', false)
         ->assertSee('actionsTanker =', false)
         ->assertSee('showActionsModal = true', false)
         ->assertSee('method="POST" target="_blank" class="space-y-5"', false)

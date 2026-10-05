@@ -167,6 +167,7 @@ class AuditLog extends Model
             'status' => 'دۆخ',
             'scheduled_date' => 'بەرواری دیاریکراو',
             'scheduled_time' => 'کاتی دیاریکراو',
+            'shift_time' => 'کاتی دیاریکراوی ڕۆیشتن',
             'note' => 'تێبینی',
             'max_tankers' => 'سنووری خەتەکان',
             'remember' => 'لەبیرم بێت',

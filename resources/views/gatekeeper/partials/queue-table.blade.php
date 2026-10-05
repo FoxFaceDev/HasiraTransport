@@ -1,11 +1,12 @@
 @php($showRowNumber = $showRowNumber ?? false)
+@php($showDepartureShift = $showDepartureShift ?? false)
 <div class="overflow-x-auto">
     <table class="w-full text-right border-collapse">
         <thead><tr class="border-b border-white/10 text-gray-400">
             @if($showRowNumber)
             <th class="table-row-number py-3 px-4 font-normal">ژمارە</th>
             @endif
-            <th class="table-hasira-code whitespace-nowrap py-3 px-4 font-normal">کۆدی حەسیرە</th><th class="py-3 px-4 font-normal">ژمارەی تەنکەر</th><th class="py-3 px-4 font-normal">خاوەنی خەت</th><th class="py-3 px-4 font-normal">مۆبایل</th><th class="py-3 px-4 font-normal">ژمارەی ڕۆیشتن</th><th class="py-3 px-4 font-normal">بەروار</th><th class="py-3 px-4 font-normal">کات</th><th class="py-3 px-4 font-normal">تێبینی</th><th class="py-3 px-4 font-normal">کردارەکان</th>
+            <th class="table-hasira-code whitespace-nowrap py-3 px-4 font-normal">کۆدی حەسیرە</th><th class="py-3 px-4 font-normal">ژمارەی تەنکەر</th><th class="py-3 px-4 font-normal">خاوەنی خەت</th><th class="py-3 px-4 font-normal">مۆبایل</th><th class="py-3 px-4 font-normal">ژمارەی ڕۆیشتن</th><th class="py-3 px-4 font-normal">بەروار</th>@if($showDepartureShift)<th class="py-3 px-4 font-normal">کاتی دیاریکراو</th><th class="py-3 px-4 font-normal">کاتی ڕۆیشتن</th>@else<th class="py-3 px-4 font-normal">کات</th>@endif<th class="py-3 px-4 font-normal">تێبینی</th><th class="py-3 px-4 font-normal">کردارەکان</th>
         </tr></thead>
         <tbody>
             <template x-for="(tanker, index) in visibleTankers" :key="tanker.row_key || tanker.id">
@@ -26,7 +27,7 @@
                         @endcan
                     </td>
                     <td class="py-3 px-4 text-center"><span class="inline-flex min-w-8 justify-center rounded-full bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-700" x-text="tanker.departed_count || 0"></span></td>
-                    <td class="whitespace-nowrap py-3 px-4" x-text="getScheduledDateLabel(tanker)"></td><td class="py-3 px-4" x-text="tanker.queue?.scheduled_time || '-'"></td>
+                    <td class="whitespace-nowrap py-3 px-4" x-text="getScheduledDateLabel(tanker)"></td>@if($showDepartureShift)<td class="whitespace-nowrap py-3 px-4" x-text="tanker.queue?.shift_time || '-'"></td>@endif<td class="py-3 px-4" x-text="tanker.queue?.scheduled_time || '-'"></td>
                     <td class="py-3 px-4">
                         @can('update queue notes')
                         <input type="text" :value="tanker.queue?.note || ''" @input.debounce.1000ms="updateNote(tanker.id, $el.value)" placeholder="تێبینی بنووسە..." class="glass-input w-full min-w-[150px] rounded-lg px-3 py-1 text-sm">
